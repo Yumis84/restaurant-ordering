@@ -1,0 +1,4 @@
+-- Production migration 20261001110401
+-- Canonical implementation snapshot: validates active location/products, quantities,
+-- text lengths, duplicate/invalid modifiers, modifier min/max constraints, and computes prices server-side.
+-- See docs/PRODUCTION_SCHEMA_SNAPSHOT.md for the exact current function definition.
