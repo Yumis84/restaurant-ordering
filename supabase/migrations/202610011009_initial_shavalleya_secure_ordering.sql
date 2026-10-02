@@ -1,0 +1,8 @@
+-- Applied to Supabase project bspktoshbiyhfpmulfek on 2026-10-01.
+-- Canonical initial schema lives in the database migration history.
+-- Tables: locations, categories, products, modifier_groups, modifiers,
+-- product_modifier_groups, orders, order_items, order_item_modifiers,
+-- order_status_history.
+-- Guest ordering is exposed only through public.place_order(), which
+-- recalculates prices from canonical product/modifier rows.
+-- Guest status lookup uses an unguessable public_token via get_order_status().
