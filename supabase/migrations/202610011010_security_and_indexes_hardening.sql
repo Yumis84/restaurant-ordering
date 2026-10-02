@@ -1,0 +1,4 @@
+-- Applied after initial schema.
+-- Revoked direct execution of trigger helper and platform rls_auto_enable from anon/authenticated.
+-- Added covering indexes for foreign keys.
+-- place_order/get_order_status remain intentionally public SECURITY DEFINER boundaries.
