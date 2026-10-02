@@ -1,0 +1,8 @@
+-- Production migration 20261001112101
+-- staff_set_order_status is service-role only and enforces:
+-- pending -> accepted|rejected|cancelled
+-- accepted -> preparing|cancelled
+-- preparing -> ready|cancelled
+-- ready -> completed|cancelled
+-- Same-status calls are idempotent and do not duplicate history.
+-- Exact current definition is recorded in docs/PRODUCTION_SCHEMA_SNAPSHOT.md.
