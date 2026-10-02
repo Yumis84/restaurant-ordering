@@ -1,0 +1,3 @@
+-- Applied 2026-10-01.
+-- place_order now enforces modifier-group min/max selection constraints server-side.
+-- staff_set_order_status is service_role-only and is the mutation boundary intended for Telegram/KDS staff actions.
