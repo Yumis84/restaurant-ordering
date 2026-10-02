@@ -1,0 +1,5 @@
+-- Public menu snapshot imported 2026-10-01.
+-- Source was a fresh owner-menu listing; ambiguous drink variants were intentionally excluded.
+-- Canonical production values remain editable in Supabase.
+-- 37 confirmed products were inserted across Авторские, Бургеры, Выпечка,
+-- Стартеры, Комбо, Панини, Добавки, Тортилья, Хот-доги and Шаурма.
