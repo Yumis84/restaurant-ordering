@@ -176,9 +176,16 @@ grant execute on function public.staff_transition_order(
   uuid,text,text,bigint,uuid,text,text,text,text
 ) to service_role;
 
--- Compatibility note:
--- Existing public.staff_set_order_status is intentionally NOT replaced here.
--- Telegram remains on the current production path until isolated acceptance,
--- then both KDS and Telegram can be switched to staff_transition_order.
+-- IMPORTANT ROLLOUT NOTE:
+-- This draft changes the existing status-history trigger. If it were applied while
+-- Telegram still used the legacy staff_set_order_status(), that legacy RPC would
+-- continue doing its own explicit history INSERT and duplicate rows would persist.
+-- Therefore this file is an ISOLATED-TEST draft, not a production preparation
+-- migration. Production rollout must be split:
+--   Phase A: additive schema only (revision/audit/idempotency columns + new RPC,
+--            without replacing the live trigger semantics).
+--   Phase B: atomic cutover of trigger + Telegram/KDS canonical transition path,
+--            with the legacy RPC disabled/replaced in the same controlled release.
+-- Never apply this combined draft directly to the live Shavalleya database.
 
 commit;
