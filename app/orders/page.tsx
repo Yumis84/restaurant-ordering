@@ -1,9 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import TicketItems, { type TicketItem } from './TicketItems'
 
 type Status = 'pending' | 'accepted' | 'preparing' | 'ready' | 'completed' | 'cancelled'
-type Ticket = { id: number; status: Status; created: number; readyAt?: number; items: string[]; note?: string; changed?: boolean; reason?: string }
+type Ticket = { id: number; status: Status; created: number; readyAt?: number; items: TicketItem[]; note?: string; changed?: boolean; reason?: string }
 const next: Partial<Record<Status, Status>> = { pending: 'accepted', accepted: 'preparing', preparing: 'ready', ready: 'completed' }
 const action: Partial<Record<Status, string>> = { pending: 'Принять', accepted: 'Начать готовить', preparing: 'Готов', ready: 'Выдан' }
 const labels: Record<Status, string> = { pending: 'Новый', accepted: 'Принят', preparing: 'Готовится', ready: 'Готов', completed: 'Выдан', cancelled: 'Отменён' }
@@ -14,10 +15,20 @@ const columns: { title: string; states: Status[]; color: string }[] = [
 ]
 function samples(now: number): Ticket[] {
   return [
-    { id: 101, status: 'pending', created: now - 120000, items: ['2 × Шаверма классическая', '+ Сыр · без лука'], note: 'Пример: соус отдельно' },
-    { id: 102, status: 'accepted', created: now - 300000, items: ['1 × Шаверма куриная', '1 × Чай'] },
-    { id: 103, status: 'preparing', created: now - 540000, items: ['1 × Шаверма овощная'], changed: true, note: 'Пример изменения: без острого соуса' },
-    { id: 104, status: 'ready', created: now - 1800000, readyAt: now - 960000, items: ['2 × Шаверма классическая'] },
+    { id: 101, status: 'pending', created: now - 120000, items: [
+      { id: '101-1', name_snapshot: 'Шаверма классическая', quantity: 1, modifiers: [{ id: '101-1-cheese', name_snapshot: 'Сыр' }], note: 'Соус отдельно' },
+      { id: '101-2', name_snapshot: 'Шаверма классическая', quantity: 1, modifiers: [], exclusions: ['лука'] },
+    ], note: 'Упаковать каждую отдельно' },
+    { id: 102, status: 'accepted', created: now - 300000, items: [
+      { id: '102-1', name_snapshot: 'Шаверма куриная', quantity: 1, modifiers: [{ id: '102-1-pepper', name_snapshot: 'Халапеньо' }, { id: '102-1-cheese', name_snapshot: 'Сыр' }] },
+      { id: '102-2', name_snapshot: 'Чай', quantity: 1, modifiers: [] },
+    ] },
+    { id: 103, status: 'preparing', created: now - 540000, items: [
+      { id: '103-1', name_snapshot: 'Шаверма овощная', quantity: 1, modifiers: [], exclusions: ['острого соуса'] },
+    ], changed: true, note: 'Пример изменения: убран острый соус' },
+    { id: 104, status: 'ready', created: now - 1800000, readyAt: now - 960000, items: [
+      { id: '104-1', name_snapshot: 'Шаверма классическая', quantity: 2, modifiers: [] },
+    ] },
   ]
 }
 
@@ -58,8 +69,8 @@ export default function OrdersPreview() {
     return <article key={order.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="flex items-center justify-between gap-3"><h3 className="text-3xl font-black">№ {order.id}</h3><span className={order.status === 'ready' && minutes >= 15 ? 'font-bold text-red-700' : 'text-slate-600'}>{order.status === 'ready' ? 'Готов ' : ''}{minutes} мин</span></div>
       <p className="mt-2 text-sm text-slate-500">Самовывоз · {labels[order.status]}</p>
-      <ul className="my-5 space-y-2 text-lg font-semibold">{order.items.map((item, i) => <li key={i}>{item}</li>)}</ul>
-      {order.note && <p className="mb-4 rounded-xl bg-amber-50 p-3 text-amber-950">{order.note}</p>}
+      <TicketItems items={order.items} />
+      {order.note && <p className="mb-4 break-words rounded-xl bg-amber-50 p-3 text-amber-950"><span className="font-bold">Ко всему заказу: </span>{order.note}</p>}
       {order.changed && !done && <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3"><p className="font-bold text-red-800">Заказ изменён</p><button disabled={offline} onClick={() => setOrders(current => current.map(o => o.id === order.id ? { ...o, changed: false } : o))} className="mt-3 min-h-14 w-full rounded-xl bg-red-800 px-3 font-bold text-white disabled:opacity-40">Подтвердить изменения</button></div>}
       <p className="mb-4 text-sm text-slate-500">Оплата при получении</p>
       {order.reason && <p className="mb-4 text-sm">Причина отмены: {order.reason}</p>}
