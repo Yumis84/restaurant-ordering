@@ -18,6 +18,8 @@ begin
   values ('kds-contract-test-' || replace(gen_random_uuid()::text, '-', ''), 'KDS contract test', true)
   returning id into v_location;
 
+  -- order_number is GENERATED ALWAYS AS IDENTITY in the production schema,
+  -- so it is deliberately omitted here.
   insert into public.orders(location_id, status, total)
   values (v_location, 'pending', 0)
   returning id into v_order;
@@ -27,7 +29,11 @@ begin
   if v_revision <> 0 then raise exception 'ASSERT initial revision: %', v_revision; end if;
 
   -- Simulate service_role because the canonical RPC is intentionally backend-only.
+  -- auth.role() in Supabase reads request.jwt.claim.role first.
   perform set_config('request.jwt.claim.role', 'service_role', true);
+  if auth.role() <> 'service_role' then
+    raise exception 'ASSERT service_role simulation failed: %', auth.role();
+  end if;
 
   select x.status, x.revision into v_status, v_revision
   from public.staff_transition_order(
