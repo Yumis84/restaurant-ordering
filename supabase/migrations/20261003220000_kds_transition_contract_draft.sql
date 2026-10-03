@@ -111,10 +111,13 @@ begin
   limit 1;
 
   if found then
+    -- Idempotent replay returns the result of the original transition,
+    -- not whatever later state the order may have reached.
     return query
-      select o.id, o.status, o.revision, o.updated_at
-      from public.orders o
-      where o.id = p_order_id;
+      select v_existing.order_id,
+             v_existing.status,
+             v_existing.revision,
+             v_existing.created_at;
     return;
   end if;
 
