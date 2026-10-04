@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireLocationManager, staffDatabase } from '@/lib/staff/server'
+import { requireLocationManager, staffDatabase, requireSameOrigin } from '@/lib/staff/server'
 export const dynamic='force-dynamic'
 type Params={params:Promise<{locationId:string}>}
 
@@ -21,6 +21,7 @@ export async function GET(_:NextRequest,{params}:Params){
 
 export async function POST(request:NextRequest,{params}:Params){
   try{
+    await requireSameOrigin()
     const {locationId}=await params
     const actor=await requireLocationManager(locationId)
     const body=await request.json().catch(()=>null)
