@@ -37,7 +37,14 @@ export default function StaffAdminPage(){
     if(!locationId)return
     try{const p=await api(`/staff/api/locations/${locationId}/staff`);setMembers(p.staff??[]);setError('')}catch(e){handleError(e)}
   },[locationId,handleError])
-  useEffect(()=>{void load()},[load])
+  useEffect(()=>{
+    if(!locationId)return
+    let cancelled=false
+    void api(`/staff/api/locations/${locationId}/staff`).then(p=>{
+      if(!cancelled){setMembers(p.staff??[]);setError('')}
+    }).catch(e=>{if(!cancelled)handleError(e)})
+    return ()=>{cancelled=true}
+  },[locationId,handleError])
 
   async function create(event:FormEvent<HTMLFormElement>){
     event.preventDefault(); if(!locationId)return
