@@ -24,7 +24,10 @@ export async function GET() {
     }, { headers: { 'Cache-Control': 'no-store' } })
   } catch (error) {
     const code = error instanceof Error ? error.message : 'STAFF_API_ERROR'
-    const status = code === 'STAFF_AUTH_NOT_IMPLEMENTED' ? 503 : 500
+    const status =
+      code === 'STAFF_UNAUTHORIZED' ? 401 :
+      code === 'STAFF_FORBIDDEN' ? 403 :
+      code === 'STAFF_BACKEND_NOT_CONFIGURED' ? 503 : 500
     return NextResponse.json({ error: code }, { status, headers: { 'Cache-Control': 'no-store' } })
   }
 }
