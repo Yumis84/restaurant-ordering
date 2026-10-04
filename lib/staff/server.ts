@@ -85,3 +85,9 @@ export async function requireSameOrigin() {
   const expected = `${proto}://${host}`
   if (parsed.origin !== expected) throw new Error('INVALID_ORIGIN')
 }
+
+export function requireKdsLiveEnabled() {
+  if (process.env.KDS_LIVE_ENABLED !== 'true') {
+    throw new Error('KDS_NOT_ENABLED')
+  }
+}
