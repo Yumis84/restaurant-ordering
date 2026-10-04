@@ -1,31 +1,25 @@
 'use client'
 
-/*
- * Temporary V1 bootstrap: staff_id is explicit. Before restaurant rollout,
- * replace this operator-facing UUID field with a non-secret short staff code
- * or a protected staff chooser. Never expose an unauthenticated staff directory.
- */
-
 import { FormEvent, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 export default function StaffLoginPage() {
   const router=useRouter()
-  const [staffId,setStaffId]=useState('')
+  const [staffCode,setStaffCode]=useState('')
   const [pin,setPin]=useState('')
   const [busy,setBusy]=useState(false)
   const [error,setError]=useState('')
 
   async function submit(event: FormEvent) {
     event.preventDefault()
-    if (!staffId.trim() || !pin) return
+    if (!staffCode.trim() || !pin) return
     setBusy(true); setError('')
     try {
       const response=await fetch('/staff/api/session',{
         method:'POST',
         credentials:'same-origin',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({staff_id:staffId.trim(),pin}),
+        body:JSON.stringify({staff_code:staffCode.trim(),pin}),
       })
       const payload=await response.json().catch(()=>({}))
       if (!response.ok) throw new Error(payload?.error||'LOGIN_FAILED')
@@ -43,14 +37,14 @@ export default function StaffLoginPage() {
     <form onSubmit={submit} className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-sm">
       <h1 className="text-2xl font-black">Вход сотрудника</h1>
       <p className="mt-1 text-sm text-slate-500">Restaurant Ordering · KDS</p>
-      <label className="mt-6 block text-sm font-bold">ID сотрудника
-        <input autoComplete="username" value={staffId} onChange={e=>setStaffId(e.target.value)} className="mt-2 min-h-12 w-full rounded-xl border px-3" />
+      <label className="mt-6 block text-sm font-bold">Код сотрудника
+        <input autoComplete="username" placeholder="Например: ivan" value={staffCode} onChange={e=>setStaffCode(e.target.value)} className="mt-2 min-h-12 w-full rounded-xl border px-3" />
       </label>
       <label className="mt-4 block text-sm font-bold">PIN
         <input type="password" inputMode="numeric" autoComplete="current-password" value={pin} onChange={e=>setPin(e.target.value)} className="mt-2 min-h-12 w-full rounded-xl border px-3 text-2xl tracking-widest" />
       </label>
       {error && <p role="alert" className="mt-4 text-sm text-red-800">{error}</p>}
-      <button disabled={busy||!staffId.trim()||!pin} className="mt-6 min-h-14 w-full rounded-xl bg-slate-900 text-lg font-bold text-white disabled:opacity-40">{busy?'Вход…':'Войти'}</button>
+      <button disabled={busy||!staffCode.trim()||!pin} className="mt-6 min-h-14 w-full rounded-xl bg-slate-900 text-lg font-bold text-white disabled:opacity-40">{busy?'Вход…':'Войти'}</button>
     </form>
   </main>
 }
