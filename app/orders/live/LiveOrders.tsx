@@ -28,6 +28,7 @@ export default function LiveOrders() {
   const [busy,setBusy]=useState<string|null>(null)
   const [error,setError]=useState('')
   const [offline,setOffline]=useState(false)
+  const [canManageStaff,setCanManageStaff]=useState(false)
   const [cancelId,setCancelId]=useState<string|null>(null)
   const [cancelReason,setCancelReason]=useState('')
 
@@ -50,6 +51,10 @@ export default function LiveOrders() {
   },[router])
 
   useEffect(()=>{
+    void fetch('/staff/api/me',{credentials:'same-origin',cache:'no-store'})
+      .then(r=>r.ok?r.json():null)
+      .then(p=>setCanManageStaff(Boolean(p?.locations?.some((x:{role:string})=>x.role==='manager'||x.role==='owner'))))
+      .catch(()=>setCanManageStaff(false))
     void reconcile()
     const timer=setInterval(()=>void reconcile(),15000)
     const onOnline=()=>void reconcile()
@@ -100,7 +105,7 @@ export default function LiveOrders() {
   return <main className="min-h-screen bg-slate-100 text-slate-900">
     <header className="flex items-center justify-between gap-4 border-b bg-white p-5 lg:px-8">
       <div><h1 className="text-3xl font-black">Заказы</h1><p className="text-sm text-slate-500">Live KDS · защищённый режим</p></div>
-      <div className="flex gap-2"><button onClick={()=>void reconcile()} disabled={loading} className="min-h-12 rounded-xl border px-4 font-bold">Обновить</button><button onClick={()=>void logoutStaff().finally(()=>{router.replace('/orders/live/login');router.refresh()})} className="min-h-12 rounded-xl border px-4">Выйти</button></div>
+      <div className="flex gap-2">{canManageStaff&&<button onClick={()=>router.push('/orders/live/staff')} className="min-h-12 rounded-xl border px-4">Сотрудники</button>}<button onClick={()=>void reconcile() disabled={loading} className="min-h-12 rounded-xl border px-4 font-bold">Обновить</button><button onClick={()=>void logoutStaff().finally(()=>{router.replace('/orders/live/login');router.refresh()})} className="min-h-12 rounded-xl border px-4">Выйти</button></div>
     </header>
     {offline && <div role="alert" className="bg-red-800 p-4 text-center font-bold text-white">Нет связи с сервером. Изменение заказов заблокировано.</div>}
     {error && <p role="status" className="px-5 pt-4 text-sm text-red-800">{error}</p>}
