@@ -27,6 +27,8 @@ export default function LiveOrders() {
   const [loading,setLoading]=useState(true)
   const [busy,setBusy]=useState<string|null>(null)
   const [error,setError]=useState('')
+  const [logoutError,setLogoutError]=useState('')
+  const [loggingOut,setLoggingOut]=useState(false)
   const [offline,setOffline]=useState(false)
   const [canManageStaff,setCanManageStaff]=useState(false)
   const [cancelId,setCancelId]=useState<string|null>(null)
@@ -98,6 +100,21 @@ export default function LiveOrders() {
     }
   }
 
+  async function handleLogout() {
+    if (loggingOut) return
+    setLoggingOut(true)
+    setLogoutError('')
+    try {
+      await logoutStaff()
+      router.replace('/orders/live/login')
+      router.refresh()
+    } catch {
+      setLogoutError('Не удалось подтвердить выход на сервере. Повторите выход.')
+    } finally {
+      setLoggingOut(false)
+    }
+  }
+
   async function advance(order: ActiveOrder) {
     const toStatus=next[order.status]
     if (!toStatus || offline || busy) return
@@ -107,9 +124,10 @@ export default function LiveOrders() {
   return <main className="min-h-screen bg-slate-100 text-slate-900">
     <header className="flex items-center justify-between gap-4 border-b bg-white p-5 lg:px-8">
       <div><h1 className="text-3xl font-black">Заказы</h1><p className="text-sm text-slate-500">Live KDS · защищённый режим</p></div>
-      <div className="flex gap-2">{canManageStaff&&<button onClick={()=>router.push('/orders/live/staff')} className="min-h-12 rounded-xl border px-4">Сотрудники</button>}<button onClick={()=>void reconcile()} disabled={loading} className="min-h-12 rounded-xl border px-4 font-bold">Обновить</button><button onClick={()=>void logoutStaff().finally(()=>{router.replace('/orders/live/login');router.refresh()})} className="min-h-12 rounded-xl border px-4">Выйти</button></div>
+      <div className="flex gap-2">{canManageStaff&&<button onClick={()=>router.push('/orders/live/staff')} className="min-h-12 rounded-xl border px-4">Сотрудники</button>}<button onClick={()=>void reconcile()} disabled={loading} className="min-h-12 rounded-xl border px-4 font-bold">Обновить</button><button disabled={loggingOut} onClick={()=>void handleLogout()} className="min-h-12 rounded-xl border px-4">Выйти</button></div>
     </header>
     {offline && <div role="alert" className="bg-red-800 p-4 text-center font-bold text-white">Нет связи с сервером. Изменение заказов заблокировано.</div>}
+    {logoutError && <p role="alert" className="px-5 pt-4 text-sm text-red-800">{logoutError}</p>}
     {error && <p role="status" className="px-5 pt-4 text-sm text-red-800">{error}</p>}
     {loading ? <p className="p-8">Загрузка заказов…</p> :
       <section className="grid gap-4 p-5 md:grid-cols-2 lg:grid-cols-3">
