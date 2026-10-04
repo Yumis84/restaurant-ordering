@@ -55,7 +55,9 @@ export default function LiveOrders() {
       .then(r=>r.ok?r.json():null)
       .then(p=>setCanManageStaff(Boolean(p?.locations?.some((x:{role:string})=>x.role==='manager'||x.role==='owner'))))
       .catch(()=>setCanManageStaff(false))
-    void reconcile()
+    // Defer the initial reconciliation out of the effect body. Subsequent
+    // reconciliations are driven by timer/network events or explicit actions.
+    queueMicrotask(()=>void reconcile())
     const timer=setInterval(()=>void reconcile(),15000)
     const onOnline=()=>void reconcile()
     const onOffline=()=>setOffline(true)
