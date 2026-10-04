@@ -1,5 +1,44 @@
 # Staff orders preview
 
+## Current reconciliation — 2026-10-04 UTC
+
+Author/Agent: ChatGPT (Codex).
+Verified GitHub feature head before this increment:
+`44a38631bf6a73646383aee0ed28603e21025024`.
+Main remains `ea0075b5562d775607e983d2d28757b74c6582dd`.
+
+The sections below describe earlier preview work, not the complete current
+implementation. Subsequent work in another dialogue added:
+- server-side staff sessions and PIN/code login;
+- location/role-scoped staff administration and protected order APIs;
+- live orders UI with polling/reconciliation and revision-aware transitions;
+- draft additive/auth/transition migrations and isolated SQL acceptance files;
+- KDS CI for web lint and server-mode Next.js build.
+
+GitHub KDS CI passed for the reviewed head:
+https://github.com/Yumis84/restaurant-ordering/actions/runs/37174893065
+This proves that workflow's lint/build result, not HTTP/SQL/browser acceptance.
+The checked-in security gate is still unchecked. This reconciliation did not
+inspect the current deployed database or certify production readiness.
+
+This increment fixes a confirmed UI error in `LiveOrders.tsx`: logout used
+`.finally()` to navigate even if server-side revocation failed. Navigation now
+follows a successful logout only; a separate persistent error message reports
+failure and the button allows retry. Periodic order refresh does not clear that
+logout message. Commit: `390f392e4389e92cec2c7a48b89f81a4168b8543`.
+
+Next: complete the disposable HTTP acceptance in
+`KDS_SECURITY_ACCEPTANCE_MATRIX.md`, including logout failure and retry.
+Reconcile actual applied migration state before any production action.
+Do not run all draft migrations blindly; the rollout documents distinguish
+isolated combined drafts from compatibility-preserving staged cutover.
+Keep customer ordering and existing Telegram operation working.
+No production enablement, migration, merge, or deployment was performed in this
+increment.
+
+---
+
+
 Author/Agent: CODEX
 Date: 2026-10-03 UTC
 Scope: RESTAURANT-ORDERING / KDS-V1 (Shavalleya pilot)
