@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireStaffContext, staffDatabase } from '@/lib/staff/server'
+import { requireStaffContext, staffDatabase, requireSameOrigin } from '@/lib/staff/server'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,6 +15,7 @@ function rpcErrorCode(message: string) {
 
 export async function POST(request: NextRequest, { params }: Params) {
   try {
+    await requireSameOrigin()
     const staff = await requireStaffContext()
     const { id } = await params
     const body = await request.json().catch(() => null)
