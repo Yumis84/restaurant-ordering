@@ -17,7 +17,7 @@ export function staffDatabase() {
   return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } })
 }
 
-function tokenHash(token: string) {
+export function tokenHash(token: string) {
   return createHash('sha256').update(token).digest('hex')
 }
 
