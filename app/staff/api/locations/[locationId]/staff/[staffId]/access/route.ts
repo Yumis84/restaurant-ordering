@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireLocationManager, staffDatabase } from '@/lib/staff/server'
+import { requireLocationManager, staffDatabase, requireSameOrigin } from '@/lib/staff/server'
 export const dynamic='force-dynamic'
 type Params={params:Promise<{locationId:string;staffId:string}>}
 
 export async function POST(request:NextRequest,{params}:Params){
   try{
+    await requireSameOrigin()
     const {locationId,staffId}=await params
     const actor=await requireLocationManager(locationId)
     if(actor.staffId===staffId) return NextResponse.json({error:'SELF_ACCESS_CHANGE_FORBIDDEN'},{status:400})
