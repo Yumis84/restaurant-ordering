@@ -45,9 +45,14 @@ export default function LiveOrders() {
     void reconcile()
     const timer=setInterval(()=>void reconcile(),15000)
     const onOnline=()=>void reconcile()
+    const onOffline=()=>setOffline(true)
     window.addEventListener('online',onOnline)
-    window.addEventListener('offline',()=>setOffline(true),{once:true})
-    return ()=>{clearInterval(timer);window.removeEventListener('online',onOnline)}
+    window.addEventListener('offline',onOffline)
+    return ()=>{
+      clearInterval(timer)
+      window.removeEventListener('online',onOnline)
+      window.removeEventListener('offline',onOffline)
+    }
   },[reconcile])
 
   async function advance(order: ActiveOrder) {
