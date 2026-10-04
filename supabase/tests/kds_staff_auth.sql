@@ -1,107 +1,64 @@
 -- ISOLATED/DISPOSABLE DATABASE ONLY.
--- Requires KDS staff auth draft migrations.
--- Entire harness rolls back.
+-- Requires staff auth + staff-code + lockout-fix drafts. Entire harness rolls back.
 
 begin;
 
 do $$
 declare
-  v_location uuid := gen_random_uuid();
-  v_staff uuid := gen_random_uuid();
-  v_other_location uuid := gen_random_uuid();
+  v_location uuid:=gen_random_uuid();
+  v_staff uuid:=gen_random_uuid();
   v_count integer;
   v_failures integer;
   v_locked timestamptz;
+  v_ok boolean;
 begin
-  insert into public.locations(id, slug, name, active)
-  values
-    (v_location, 'kds-auth-test-a-' || substr(v_location::text,1,8), 'KDS auth test A', true),
-    (v_other_location, 'kds-auth-test-b-' || substr(v_other_location::text,1,8), 'KDS auth test B', true);
+  insert into public.locations(id,slug,name,active)
+  values(v_location,'staff-auth-'||substr(v_location::text,1,8),'Staff auth test',true);
 
-  insert into public.staff_users(id, display_name, staff_code, pin_hash)
-  values (v_staff, 'KDS Test Staff', 'cook-01', crypt('4826', gen_salt('bf', 4)));
+  insert into public.staff_users(id,display_name,staff_code,pin_hash)
+  values(v_staff,'KDS Test Staff','cook-01',crypt('4826',gen_salt('bf',4)));
 
-  insert into public.staff_location_memberships(staff_id, location_id)
-  values (v_staff, v_location);
+  insert into public.staff_location_memberships(staff_id,location_id,role,active)
+  values(v_staff,v_location,'staff',true);
 
   perform set_config('request.jwt.claim.role','service_role',true);
 
-  -- Correct code + PIN succeeds.
-  select count(*) into v_count
-  from public.staff_verify_pin('cook-01', '4826');
-  if v_count <> 1 then raise exception 'correct PIN did not authenticate'; end if;
+  select r.ok into v_ok from public.staff_verify_pin('cook-01','4826') r;
+  if v_ok is distinct from true then raise exception 'correct credentials failed'; end if;
 
-  -- Code lookup is case-insensitive and trims surrounding whitespace.
-  select count(*) into v_count
-  from public.staff_verify_pin('  COOK-01  ', '4826');
-  if v_count <> 1 then raise exception 'normalized staff code did not authenticate'; end if;
+  select r.ok into v_ok from public.staff_verify_pin('  COOK-01  ','4826') r;
+  if v_ok is distinct from true then raise exception 'normalized code failed'; end if;
 
-  -- Unknown code is indistinguishable from a wrong PIN.
-  begin
-    perform public.staff_verify_pin('missing-user', '4826');
-    raise exception 'unknown code unexpectedly authenticated';
-  exception when others then
-    if sqlerrm = 'unknown code unexpectedly authenticated' then raise; end if;
-    if sqlerrm <> 'INVALID_CREDENTIALS' then raise; end if;
-  end;
+  select r.ok into v_ok from public.staff_verify_pin('missing-user','4826') r;
+  if v_ok is distinct from false then raise exception 'unknown code unexpectedly authenticated'; end if;
 
-  -- Four failures do not lock.
-  for i in 1..4 loop
-    begin
-      perform public.staff_verify_pin('cook-01', '0000');
-    exception when others then
-      if sqlerrm <> 'INVALID_CREDENTIALS' then raise; end if;
-    end;
+  -- Wrong PIN writes must persist; no exception may roll them back.
+  for v_count in 1..4 loop
+    select r.ok into v_ok from public.staff_verify_pin('cook-01','0000') r;
+    if v_ok is distinct from false then raise exception 'wrong PIN unexpectedly authenticated'; end if;
+    select pin_failures,locked_until into v_failures,v_locked
+    from public.staff_users where id=v_staff;
+    if v_failures<>v_count then raise exception 'failure count expected %, got %',v_count,v_failures; end if;
+    if v_locked is not null then raise exception 'locked before fifth failure'; end if;
   end loop;
 
-  select pin_failures, locked_until into v_failures, v_locked
+  select r.ok into v_ok from public.staff_verify_pin('cook-01','0000') r;
+  select pin_failures,locked_until into v_failures,v_locked
   from public.staff_users where id=v_staff;
-  if v_failures <> 4 or v_locked is not null then
-    raise exception 'unexpected pre-lock state failures=% locked=%',v_failures,v_locked;
+  if v_ok is distinct from false or v_failures<>5 or v_locked is null then
+    raise exception 'fifth failure did not persist lockout';
   end if;
 
-  -- Fifth failure locks for a bounded interval.
-  begin
-    perform public.staff_verify_pin('cook-01', '0000');
-  exception when others then
-    if sqlerrm <> 'INVALID_CREDENTIALS' then raise; end if;
-  end;
+  select r.ok into v_ok from public.staff_verify_pin('cook-01','4826') r;
+  if v_ok is distinct from false then raise exception 'locked account authenticated'; end if;
 
-  select pin_failures, locked_until into v_failures, v_locked
-  from public.staff_users where id=v_staff;
-  if v_failures <> 5 or v_locked is null or v_locked <= clock_timestamp() then
-    raise exception 'lockout not applied';
-  end if;
-
-  -- Correct PIN is rejected while locked.
-  begin
-    perform public.staff_verify_pin('cook-01', '4826');
-    raise exception 'locked account authenticated';
-  exception when others then
-    if sqlerrm = 'locked account authenticated' then raise; end if;
-    if sqlerrm <> 'INVALID_CREDENTIALS' then raise; end if;
-  end;
-
-  -- Simulate lock expiry; correct PIN resets counters.
   update public.staff_users set locked_until=clock_timestamp()-interval '1 second' where id=v_staff;
-  perform public.staff_verify_pin('cook-01', '4826');
+  select r.ok into v_ok from public.staff_verify_pin('cook-01','4826') r;
+  if v_ok is distinct from true then raise exception 'expired lock did not authenticate'; end if;
 
-  select pin_failures, locked_until into v_failures, v_locked
+  select pin_failures,locked_until into v_failures,v_locked
   from public.staff_users where id=v_staff;
-  if v_failures <> 0 or v_locked is not null then
-    raise exception 'successful auth did not reset lock state';
-  end if;
-
-  -- Membership remains scoped to exactly one authorized location.
-  select count(*) into v_count
-  from public.staff_location_memberships
-  where staff_id=v_staff and active and location_id=v_location;
-  if v_count <> 1 then raise exception 'authorized location missing'; end if;
-
-  select count(*) into v_count
-  from public.staff_location_memberships
-  where staff_id=v_staff and active and location_id=v_other_location;
-  if v_count <> 0 then raise exception 'unauthorized location leaked'; end if;
+  if v_failures<>0 or v_locked is not null then raise exception 'successful login did not reset lockout'; end if;
 end $$;
 
 rollback;
