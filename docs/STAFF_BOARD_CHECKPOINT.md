@@ -65,3 +65,29 @@ Replaced ambiguous string-array ticket contents with separate item snapshots. Ea
 Validation for this increment: strict TypeScript check of the two staff TSX files passed with React 19 types. Static React rendering checks passed for separate compositions, modifier/exclusion labels and escaping customer text. Full Next build, browser/device interaction and production acceptance have NOT been performed. Existing demo-only status/offline handling remains unchanged. No merge/deployment or database mutation.
 
 Next: review the actual deployed order schema and transition functions read-only, establish isolated backend validation, and resolve protected staff hosting/auth before connecting live orders. Do not replace or remove the working customer/Telegram path to make the new interface easier to implement.
+
+## Route boundary regression — 2026-10-04 UTC
+
+Author/Agent: ChatGPT (Codex).
+Continued from the reconciliation above; no newer Hub work reported.
+
+- c4565ef: preserve the session cookie when database revocation fails, so retry
+  targets the original session. Clear it only after successful revocation.
+- 86a601e: cross-origin order transitions now map INVALID_ORIGIN to 403,
+  rather than generic 500.
+- 140ed6b: add scripts/kds-route-boundary.test.mjs.
+
+Run from repository root with Node >=22.13:
+`node --test scripts/kds-route-boundary.test.mjs`
+
+Result: 4/4 PASS. Tests execute the actual TypeScript route bodies with injected
+framework/database doubles. Both repaired cases fail against the pre-fix source.
+Coverage: failed logout/retry; cross-origin rejection before auth/database;
+missing session; server-derived location filter with no transition RPC call for
+an inaccessible order. These tests do NOT verify the real database, Next HTTP
+server, browser cookie behavior, RLS, valid login, or concurrent transitions.
+No CI workflow change; run this test command manually until separately wired.
+
+Local environment has Node/npm but no psql/docker executable, so disposable
+PostgreSQL acceptance was not run here. Full security gate remains open.
+Production database, customer flow, Telegram, main and deployment untouched.
