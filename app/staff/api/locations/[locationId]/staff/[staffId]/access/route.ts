@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireLocationManager, staffDatabase, requireSameOrigin, requireKdsLiveEnabled } from '@/lib/staff/server'
+import { requireLocationManager, staffDatabase, requireSameOrigin, requireKdsLiveEnabled, isUuid } from '@/lib/staff/server'
 export const dynamic='force-dynamic'
 type Params={params:Promise<{locationId:string;staffId:string}>}
 
@@ -8,6 +8,7 @@ export async function POST(request:NextRequest,{params}:Params) {
   try{
     await requireSameOrigin()
     const {locationId,staffId}=await params
+    if(!isUuid(locationId)||!isUuid(staffId)) return NextResponse.json({error:'INVALID_ID'},{status:400})
     const actor=await requireLocationManager(locationId)
     if(actor.staffId===staffId) return NextResponse.json({error:'SELF_ACCESS_CHANGE_FORBIDDEN'},{status:400})
     const body=await request.json().catch(()=>null)
