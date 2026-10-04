@@ -4,16 +4,6 @@ on:
   push:
     branches:
       - feat/staff-orders-preview
-  pull_request:
-    paths:
-      - 'app/**'
-      - 'lib/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'tsconfig.json'
-      - 'next.config.*'
-      - '.github/workflows/kds-ci.yml'
-
 permissions:
   contents: read
 
