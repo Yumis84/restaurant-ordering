@@ -17,14 +17,19 @@ export async function POST(request: NextRequest) {
     p_pin: body.pin,
   })
 
-  if (error || !verified?.length) {
+  if (error) {
+    return NextResponse.json({ error: 'AUTH_SERVICE_ERROR' }, { status: 503 })
+  }
+
+  const result = verified?.[0]
+  if (!result?.ok) {
     return NextResponse.json({ error: 'INVALID_CREDENTIALS' }, { status: 401 })
   }
 
   const token = randomBytes(32).toString('base64url')
   const expires = new Date(Date.now() + 12 * 60 * 60 * 1000)
   const { error: sessionError } = await db.from('staff_sessions').insert({
-    staff_id: verified[0].staff_id,
+    staff_id: result.staff_id,
     token_hash: tokenHash(token),
     expires_at: expires.toISOString(),
   })
@@ -35,7 +40,7 @@ export async function POST(request: NextRequest) {
 
   const response = NextResponse.json({
     ok: true,
-    staff: { id: verified[0].staff_id, display_name: verified[0].display_name },
+    staff: { id: result.staff_id, display_name: result.display_name },
     expires_at: expires.toISOString(),
   })
 
