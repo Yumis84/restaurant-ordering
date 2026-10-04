@@ -15,7 +15,7 @@ begin
   values(v_location,'kds-session-'||substr(v_location::text,1,8),'KDS session test',true);
 
   insert into public.staff_users(id,display_name,pin_hash)
-  values(v_staff,'Session Test',crypt('4826',gen_salt('bf',4)));
+  values(v_staff,'Session Test',crypt('482619',gen_salt('bf',4)));
 
   insert into public.staff_location_memberships(staff_id,location_id)
   values(v_staff,v_location);
