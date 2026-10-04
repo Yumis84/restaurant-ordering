@@ -6,6 +6,7 @@ import { createClient } from '@supabase/supabase-js'
 export type StaffContext = {
   staffId: string
   locationIds: string[]
+  memberships: Array<{ locationId: string; role: 'staff'|'manager'|'owner' }>
 }
 
 const SESSION_COOKIE = 'ro_staff_session'
@@ -41,7 +42,7 @@ export async function requireStaffContext(): Promise<StaffContext> {
 
   const { data: memberships, error: membershipError } = await db
     .from('staff_location_memberships')
-    .select('location_id')
+    .select('location_id,role')
     .eq('staff_id', session.staff_id)
     .eq('active', true)
 
@@ -50,9 +51,22 @@ export async function requireStaffContext(): Promise<StaffContext> {
   return {
     staffId: session.staff_id,
     locationIds: memberships.map(row => row.location_id),
+    memberships: memberships.map(row => ({
+      locationId: row.location_id,
+      role: row.role as 'staff'|'manager'|'owner',
+    })),
   }
 }
 
 export function staffSessionCookieName() {
   return SESSION_COOKIE
+}
+
+export async function requireLocationManager(locationId: string) {
+  const staff = await requireStaffContext()
+  const membership = staff.memberships.find(row => row.locationId === locationId)
+  if (!membership || !['manager','owner'].includes(membership.role)) {
+    throw new Error('STAFF_FORBIDDEN')
+  }
+  return staff
 }
