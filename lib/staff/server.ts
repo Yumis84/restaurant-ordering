@@ -107,3 +107,12 @@ export function isUuid(value: unknown): value is string {
   return typeof value === 'string' &&
     /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
 }
+
+export function rejectOversizedJson(request: Request, maxBytes = 8192) {
+  const value = request.headers.get('content-length')
+  if (!value) return
+  const bytes = Number(value)
+  if (!Number.isSafeInteger(bytes) || bytes < 0 || bytes > maxBytes) {
+    throw new Error('REQUEST_TOO_LARGE')
+  }
+}
