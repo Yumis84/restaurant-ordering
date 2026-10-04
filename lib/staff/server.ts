@@ -1,6 +1,6 @@
 import 'server-only'
 import { createHash } from 'crypto'
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import { createClient } from '@supabase/supabase-js'
 
 export type StaffContext = {
@@ -69,4 +69,19 @@ export async function requireLocationManager(locationId: string) {
     throw new Error('STAFF_FORBIDDEN')
   }
   return staff
+}
+
+export async function requireSameOrigin() {
+  const h = await headers()
+  const origin = h.get('origin')
+  const host = h.get('x-forwarded-host') || h.get('host')
+  const proto = h.get('x-forwarded-proto') || 'https'
+
+  if (!origin || !host) throw new Error('INVALID_ORIGIN')
+
+  let parsed: URL
+  try { parsed = new URL(origin) } catch { throw new Error('INVALID_ORIGIN') }
+
+  const expected = `${proto}://${host}`
+  if (parsed.origin !== expected) throw new Error('INVALID_ORIGIN')
 }
