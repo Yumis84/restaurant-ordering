@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireStaffContext, staffDatabase, requireSameOrigin, requireKdsLiveEnabled } from '@/lib/staff/server'
+import { requireStaffContext, staffDatabase, requireSameOrigin, requireKdsLiveEnabled, isUuid } from '@/lib/staff/server'
 
 export const dynamic = 'force-dynamic'
 
@@ -22,8 +22,8 @@ export async function POST(request: NextRequest, { params }: Params) {
     const body = await request.json().catch(() => null)
 
     if (
-      !id ||
-      typeof body?.request_id !== 'string' ||
+      !isUuid(id) ||
+      !isUuid(body?.request_id) ||
       typeof body?.to_status !== 'string' ||
       typeof body?.expected_status !== 'string' ||
       !Number.isSafeInteger(body?.expected_revision) ||
