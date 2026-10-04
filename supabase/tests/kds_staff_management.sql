@@ -25,6 +25,7 @@ begin
     perform * from public.staff_create_for_location(v_location,'denied-01','Denied','482619','staff');
     raise exception 'non-service role unexpectedly created staff';
   exception when others then
+    if sqlerrm = 'non-service role unexpectedly created staff' then raise; end if;
     if sqlerrm not like '%FORBIDDEN%' then raise; end if;
   end;
 
@@ -56,6 +57,7 @@ begin
     perform * from public.staff_create_for_location(v_location,'COOK-01','Duplicate','593721','staff');
     raise exception 'duplicate staff code unexpectedly accepted';
   exception when others then
+    if sqlerrm = 'duplicate staff code unexpectedly accepted' then raise; end if;
     if sqlerrm not like '%STAFF_CODE_EXISTS%' then raise; end if;
   end;
 
@@ -64,6 +66,7 @@ begin
     perform * from public.staff_create_for_location(v_location,'owner-01','Owner Attempt','593721','owner');
     raise exception 'invalid owner role unexpectedly accepted';
   exception when others then
+    if sqlerrm = 'invalid owner role unexpectedly accepted' then raise; end if;
     if sqlerrm not like '%INVALID_ROLE%' then raise; end if;
   end;
 
@@ -72,6 +75,7 @@ begin
     perform * from public.staff_create_for_location(v_location,'shortpin','Short PIN','1234','staff');
     raise exception 'legacy 4-digit PIN unexpectedly accepted';
   exception when others then
+    if sqlerrm = 'legacy 4-digit PIN unexpectedly accepted' then raise; end if;
     if sqlerrm not like '%INVALID_PIN%' then raise; end if;
   end;
 
