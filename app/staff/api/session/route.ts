@@ -7,13 +7,13 @@ export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null)
-  if (!body?.staff_id || typeof body?.pin !== 'string') {
+  if (typeof body?.staff_code !== 'string' || typeof body?.pin !== 'string') {
     return NextResponse.json({ error: 'INVALID_REQUEST' }, { status: 400 })
   }
 
   const db = staffDatabase()
   const { data: verified, error } = await db.rpc('staff_verify_pin', {
-    p_staff_id: body.staff_id,
+    p_staff_code: body.staff_code.trim(),
     p_pin: body.pin,
   })
 
