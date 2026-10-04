@@ -75,6 +75,11 @@ export async function DELETE() {
     revocationFailed = Boolean(error)
   }
 
+  // Preserve the token on failure so the same session can be revoked on retry.
+  if (revocationFailed) {
+    return NextResponse.json({ error: 'SESSION_REVOCATION_FAILED' }, { status: 503 })
+  }
+
   jar.set(staffSessionCookieName(), '', {
     httpOnly: true,
     secure: true,
@@ -83,8 +88,5 @@ export async function DELETE() {
     maxAge: 0,
   })
 
-  if (revocationFailed) {
-    return NextResponse.json({ error: 'SESSION_REVOCATION_FAILED' }, { status: 503 })
-  }
   return NextResponse.json({ ok: true })
 }
