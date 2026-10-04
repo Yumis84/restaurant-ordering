@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireLocationManager, staffDatabase, requireSameOrigin, requireKdsLiveEnabled, isUuid } from '@/lib/staff/server'
+import { requireLocationManager, staffDatabase, requireSameOrigin, requireKdsLiveEnabled, isUuid, rejectOversizedJson } from '@/lib/staff/server'
 export const dynamic='force-dynamic'
 type Params={params:Promise<{locationId:string}>}
 
@@ -24,7 +24,7 @@ export async function GET(_:NextRequest,{params}:Params) {
 export async function POST(request:NextRequest,{params}:Params) {
   try { requireKdsLiveEnabled() } catch { return NextResponse.json({ error: 'KDS_NOT_ENABLED' }, { status: 404 }) }
   try{
-    await requireSameOrigin()
+    await requireSameOrigin(); rejectOversizedJson(request, 4096)
     const {locationId}=await params
     if(!isUuid(locationId)) return NextResponse.json({error:'INVALID_LOCATION_ID'},{status:400})
     const actor=await requireLocationManager(locationId)
