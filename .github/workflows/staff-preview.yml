@@ -1,6 +1,9 @@
 name: Staff Preview
 
 on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/staff-preview.yml']
   workflow_dispatch:
 
 permissions:
