@@ -21,6 +21,7 @@ export default function StaffAdminPage(){
   const [members,setMembers]=useState<Member[]>([])
   const [error,setError]=useState('')
   const [busy,setBusy]=useState(false)
+  const currentRole=locations.find(x=>x.id===locationId)?.role
 
   const handleError=useCallback((e:unknown)=>{
     if(e instanceof Error&&e.message==='STAFF_UNAUTHORIZED'){router.replace('/orders/live/login');return}
@@ -68,13 +69,13 @@ export default function StaffAdminPage(){
         <input required name="display_name" maxLength={80} placeholder="Имя" className="min-h-12 rounded-xl border px-3"/>
         <input required name="staff_code" minLength={3} maxLength={32} pattern="[A-Za-z0-9][A-Za-z0-9_-]{2,31}" placeholder="Код: ivan" className="min-h-12 rounded-xl border px-3"/>
         <input required name="pin" type="password" inputMode="numeric" pattern="[0-9]{4,12}" placeholder="PIN, 4–12 цифр" className="min-h-12 rounded-xl border px-3"/>
-        <select name="role" className="min-h-12 rounded-xl border px-3"><option value="staff">Сотрудник</option><option value="manager">Менеджер</option></select>
+        <select name="role" className="min-h-12 rounded-xl border px-3"><option value="staff">Сотрудник</option>{currentRole==='owner'&&<option value="manager">Менеджер</option>}</select>
         <button disabled={busy} className="min-h-14 rounded-xl bg-slate-900 font-bold text-white disabled:opacity-40 md:col-span-2">Добавить</button>
       </form>
 
       <section className="mt-6 space-y-3">{members.map(member=>{const u=Array.isArray(member.staff_users)?member.staff_users[0]:member.staff_users;return <article key={member.staff_id} className="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-white p-5">
         <div><h2 className="font-bold">{u?.display_name}</h2><p className="text-sm text-slate-500">{u?.staff_code} · {member.role}</p><p className="text-xs text-slate-400">{u?.last_login_at?`Последний вход: ${new Date(u.last_login_at).toLocaleString('ru-RU')}`:'Ещё не входил'}</p></div>
-        {member.role==='owner'?<span className="text-sm font-bold">Владелец</span>:<button disabled={busy} onClick={()=>void access(member,!member.active)} className="min-h-12 rounded-xl border px-4 font-bold">{member.active?'Отключить':'Вернуть доступ'}</button>}
+        {member.role==='owner'?<span className="text-sm font-bold">Владелец</span>:member.role==='manager'&&currentRole!=='owner'?<span className="text-sm text-slate-500">Менеджер</span>:<button disabled={busy} onClick={()=>void access(member,!member.active)} className="min-h-12 rounded-xl border px-4 font-bold">{member.active?'Отключить':'Вернуть доступ'}</button>}
       </article>})}</section></>}
     </div>
   </main>
