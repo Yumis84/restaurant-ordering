@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server'
-import { requireStaffContext, staffDatabase } from '@/lib/staff/server'
+import { requireStaffContext, staffDatabase, requireKdsLiveEnabled } from '@/lib/staff/server'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
+  try { requireKdsLiveEnabled() } catch { return NextResponse.json({ error: 'KDS_NOT_ENABLED' }, { status: 404 }) }
   try {
     const staff = await requireStaffContext()
     const db = staffDatabase()
