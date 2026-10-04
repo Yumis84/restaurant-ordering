@@ -44,12 +44,22 @@ export default function LiveOrders() {
   const [cancelReason,setCancelReason]=useState('')
   const [now,setNow]=useState(()=>Date.now())
   const [mobileStatus,setMobileStatus]=useState<OrderStatus>('pending')
-  const grouped=useMemo(()=>Object.fromEntries(columns.map(column=>[column.status,orders.filter(order=>order.status===column.status)])) as Partial<Record<OrderStatus,ActiveOrder[]>>,[orders])
+   const grouped=useMemo(()=>Object.fromEntries(columns.map(column=>[column.status,orders.filter(order=>order.status===column.status)])) as Partial<Record<OrderStatus,ActiveOrder[]>>,[orders])
 
   const reconcile=useCallback(async()=>{
     try {
       const fresh=await loadActiveOrders()
-      setOrders(fresh)
+      setOrders(previous=>{
+        const previousIds=new Set(previous.filter(order=>order.status==='pending').map(order=>order.id))
+        const incoming=fresh.filter(order=>order.status==='pending'&&!previousIds.has(order.id))
+        if (previous.length>0 && incoming.length>0) setMobileStatus('pending')
+        return fresh
+      })
+      setSeenPendingIds(previous=>{
+        const nextSeen=new Set(previous)
+        for (const order of fresh) if(order.status==='pending') nextSeen.add(order.id)
+        return nextSeen
+      })
       setOffline(false)
       setError('')
     } catch (e) {
@@ -166,9 +176,10 @@ export default function LiveOrders() {
                 {list.length===0 && <div className="rounded-2xl border border-dashed border-slate-300 bg-white/60 p-6 text-center text-sm text-slate-500">{column.empty}</div>}
                 {list.map(order=>{
                   const age=ageMinutes(order.created_at,now)
-                  return <article key={order.id} className={`rounded-2xl border-t-4 ${column.accent} bg-white p-4 shadow-sm`}>
+                  const urgent=order.status==='pending'&&age>=5
+                  return <article key={order.id} className={`rounded-2xl border-t-4 ${column.accent} bg-white p-4 shadow-sm ${urgent?'ring-2 ring-amber-300':''}`}>
                     <div className="flex items-start justify-between gap-3">
-                      <div><h3 className="text-3xl font-black leading-none">№ {order.order_number}</h3><p className="mt-2 text-xs font-medium text-slate-500">{new Date(order.created_at).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}</p></div>
+                      <div><div className="flex items-center gap-2"><h3 className="text-3xl font-black leading-none">№ {order.order_number}</h3>{order.status==='pending'&&<span className="rounded-full bg-amber-100 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-amber-900">Новый</span>}</div><p className="mt-2 text-xs font-medium text-slate-500">{new Date(order.created_at).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}</p></div>
                       <div className={`rounded-xl px-3 py-2 text-right ${age>=20?'bg-red-100 text-red-800':age>=10?'bg-amber-100 text-amber-900':'bg-slate-100 text-slate-700'}`}><div className="text-xl font-black">{age} мин</div><div className="text-[10px] font-bold uppercase tracking-wide">ожидание</div></div>
                     </div>
                     {(order.customer_name||order.customer_phone) && <div className="mt-3 rounded-xl bg-slate-50 p-3 text-sm"><span className="font-bold">{order.customer_name||'Клиент'}</span>{order.customer_phone && <div className="mt-1 text-slate-600">{order.customer_phone}</div>}</div>}
