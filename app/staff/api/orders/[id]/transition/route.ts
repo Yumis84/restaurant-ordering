@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireStaffContext, staffDatabase, requireSameOrigin, requireKdsLiveEnabled, isUuid } from '@/lib/staff/server'
+import { requireStaffContext, staffDatabase, requireSameOrigin, requireKdsLiveEnabled, isUuid, rejectOversizedJson } from '@/lib/staff/server'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,7 +16,7 @@ function rpcErrorCode(message: string) {
 export async function POST(request: NextRequest, { params }: Params) {
   try { requireKdsLiveEnabled() } catch { return NextResponse.json({ error: 'KDS_NOT_ENABLED' }, { status: 404 }) }
   try {
-    await requireSameOrigin()
+    await requireSameOrigin(); rejectOversizedJson(request, 4096)
     const staff = await requireStaffContext()
     const { id } = await params
     const body = await request.json().catch(() => null)
