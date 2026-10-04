@@ -2,6 +2,21 @@ export type OrderStatus =
   | 'pending' | 'accepted' | 'preparing' | 'ready'
   | 'completed' | 'rejected' | 'cancelled'
 
+export type ActiveOrderModifier = {
+  id: string
+  name_snapshot: string
+  price_delta: number
+}
+
+export type ActiveOrderItem = {
+  id: string
+  name_snapshot: string
+  unit_price: number
+  quantity: number
+  line_total: number
+  order_item_modifiers: ActiveOrderModifier[]
+}
+
 export type ActiveOrder = {
   id: string
   order_number: number
@@ -14,6 +29,7 @@ export type ActiveOrder = {
   customer_phone: string | null
   notes: string | null
   total: number
+  order_items: ActiveOrderItem[]
 }
 
 export class OrderConflictError extends Error {
