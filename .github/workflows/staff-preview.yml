@@ -1,20 +1,18 @@
-name: Staff Preview
+name: Staff Preview Validation
 
 on:
-  push:
-    branches: [main]
-    paths: ['.github/workflows/staff-preview.yml']
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
 
 jobs:
-  build:
+  validate:
     runs-on: ubuntu-latest
-    environment: github-pages
     steps:
       - uses: actions/checkout@v4
         with:
@@ -28,17 +26,9 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: https://bspktoshbiyhfpmulfek.supabase.co
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
           KDS_LIVE_ENABLED: 'false'
-      - run: test -f out/orders/index.html
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: out
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.pages.outputs.page_url }}
-    steps:
-      - id: pages
-        uses: actions/deploy-pages@v4
+      - name: Verify safe static preview artifact
+        run: |
+          test -f out/orders/index.html
+          test ! -e out/orders/live
+          test ! -e out/staff
+          ! grep -R -n -E 'SUPABASE_SERVICE_ROLE_KEY|service_role' out
