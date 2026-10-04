@@ -75,12 +75,18 @@ export async function requireSameOrigin() {
   const h = await headers()
   const origin = h.get('origin')
   const host = h.get('x-forwarded-host') || h.get('host')
-  const proto = h.get('x-forwarded-proto') || 'https'
+  const forwardedProto = h.get('x-forwarded-proto')
 
   if (!origin || !host) throw new Error('INVALID_ORIGIN')
 
   let parsed: URL
   try { parsed = new URL(origin) } catch { throw new Error('INVALID_ORIGIN') }
+
+  // Behind the production proxy, forwarded proto is authoritative. Without a
+  // proxy (for example local HTTP acceptance), preserve strict host matching
+  // while accepting the scheme that the browser actually used.
+  const proto = forwardedProto || parsed.protocol.slice(0, -1)
+  if (proto !== 'http' && proto !== 'https') throw new Error('INVALID_ORIGIN')
 
   const expected = `${proto}://${host}`
   if (parsed.origin !== expected) throw new Error('INVALID_ORIGIN')
