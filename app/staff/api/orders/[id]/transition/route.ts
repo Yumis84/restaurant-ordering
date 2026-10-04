@@ -35,6 +35,9 @@ export async function POST(request: NextRequest, { params }: Params) {
     }
 
     const reason = typeof body.reason === 'string' ? body.reason.trim() : null
+    if (reason && reason.length > 500) {
+      return NextResponse.json({ error: 'REASON_TOO_LONG' }, { status: 400 })
+    }
     if (['rejected','cancelled'].includes(body.to_status) && !reason) {
       return NextResponse.json({ error: 'REASON_REQUIRED' }, { status: 400 })
     }
@@ -84,6 +87,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     const status =
       code === 'STAFF_UNAUTHORIZED' ? 401 :
       code === 'STAFF_FORBIDDEN' ? 403 :
+      code === 'REQUEST_TOO_LARGE' ? 413 :
       code === 'STAFF_BACKEND_NOT_CONFIGURED' ? 503 : 500
     return NextResponse.json({ error: code }, { status, headers: { 'Cache-Control': 'no-store' } })
   }
