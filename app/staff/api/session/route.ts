@@ -1,11 +1,12 @@
 import { randomBytes } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
-import { staffDatabase, staffSessionCookieName, tokenHash, requireSameOrigin } from '@/lib/staff/server'
+import { staffDatabase, staffSessionCookieName, tokenHash, requireSameOrigin, requireKdsLiveEnabled } from '@/lib/staff/server'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
+  try { requireKdsLiveEnabled() } catch { return NextResponse.json({ error: 'KDS_NOT_ENABLED' }, { status: 404 }) }
   try { await requireSameOrigin() } catch { return NextResponse.json({ error: 'INVALID_ORIGIN' }, { status: 403 }) }
   const body = await request.json().catch(() => null)
   if (typeof body?.staff_code !== 'string' || typeof body?.pin !== 'string') {
@@ -57,6 +58,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE() {
+  try { requireKdsLiveEnabled() } catch { return NextResponse.json({ error: 'KDS_NOT_ENABLED' }, { status: 404 }) }
   try { await requireSameOrigin() } catch { return NextResponse.json({ error: 'INVALID_ORIGIN' }, { status: 403 }) }
   const jar = await cookies()
   const token = jar.get(staffSessionCookieName())?.value
