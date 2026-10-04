@@ -27,3 +27,20 @@ jobs:
       - run: npx eslint app lib
       - run: npm run build
 
+
+  staff-static:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: preview-placeholder
+      KDS_LIVE_ENABLED: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: node scripts/build-staff-static.mjs
+      - name: Verify demo board export
+        run: test -f out/orders/index.html
