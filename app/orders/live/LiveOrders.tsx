@@ -136,9 +136,15 @@ export default function LiveOrders() {
   }
 
   return <main className="min-h-screen bg-slate-100 text-slate-900">
-    <header className="flex items-center justify-between gap-4 border-b bg-white p-5 lg:px-8">
-      <div><h1 className="text-3xl font-black">Заказы</h1><p className="text-sm text-slate-500">Live KDS · защищённый режим</p></div>
-      <div className="flex gap-2">{canManageStaff&&<button onClick={()=>router.push('/orders/live/staff')} className="min-h-12 rounded-xl border px-4">Сотрудники</button>}<button onClick={()=>void reconcile()} disabled={loading} className="min-h-12 rounded-xl border px-4 font-bold">Обновить</button><button disabled={loggingOut} onClick={()=>void handleLogout()} className="min-h-12 rounded-xl border px-4">Выйти</button></div>
+    <header className="border-b bg-white p-4 lg:px-8">
+      <div className="flex items-center justify-between gap-3">
+        <div><h1 className="text-2xl font-black sm:text-3xl">Заказы</h1><p className="text-xs text-slate-500 sm:text-sm">Live KDS · защищённый режим</p></div>
+        <div className="flex gap-2">
+          <button onClick={()=>void reconcile()} disabled={loading} aria-label="Обновить заказы" className="min-h-11 rounded-xl border px-3 font-bold sm:px-4"><span className="sm:hidden">↻</span><span className="hidden sm:inline">Обновить</span></button>
+          <button disabled={loggingOut} onClick={()=>void handleLogout()} className="min-h-11 rounded-xl border px-3 sm:px-4">Выйти</button>
+        </div>
+      </div>
+      {canManageStaff&&<button onClick={()=>router.push('/orders/live/staff')} className="mt-3 min-h-10 rounded-xl border px-3 text-sm font-semibold sm:absolute sm:right-8 sm:top-[76px]">Сотрудники</button>}
     </header>
     {offline && <div role="alert" className="bg-red-800 p-4 text-center font-bold text-white">Нет связи с сервером. Изменение заказов заблокировано.</div>}
     {logoutError && <p role="alert" className="px-5 pt-4 text-sm text-red-800">{logoutError}</p>}
