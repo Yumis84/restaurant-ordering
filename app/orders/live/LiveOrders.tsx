@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { loadActiveOrders, logoutStaff, transitionOrder, type ActiveOrder, type OrderStatus } from '@/lib/staff/client'
 
@@ -20,6 +20,15 @@ const labels: Record<OrderStatus, string> = {
   pending: 'Новый', accepted: 'Принят', preparing: 'Готовится', ready: 'Готов',
   completed: 'Выдан', rejected: 'Отклонён', cancelled: 'Отменён',
 }
+const columns: { status: OrderStatus; title: string; empty: string; accent: string }[] = [
+  { status:'pending', title:'Новые', empty:'Новых заказов нет', accent:'border-amber-400' },
+  { status:'accepted', title:'Приняты', empty:'Нет принятых заказов', accent:'border-sky-400' },
+  { status:'preparing', title:'Готовятся', empty:'Ничего не готовится', accent:'border-violet-400' },
+  { status:'ready', title:'Готовы', empty:'Нет готовых заказов', accent:'border-emerald-500' },
+]
+function ageMinutes(createdAt:string, now:number) {
+  return Math.max(0,Math.floor((now-new Date(createdAt).getTime())/60000))
+}
 
 export default function LiveOrders() {
   const router=useRouter()
@@ -33,6 +42,8 @@ export default function LiveOrders() {
   const [canManageStaff,setCanManageStaff]=useState(false)
   const [cancelId,setCancelId]=useState<string|null>(null)
   const [cancelReason,setCancelReason]=useState('')
+  const [now,setNow]=useState(()=>Date.now())
+  const grouped=useMemo(()=>Object.fromEntries(columns.map(column=>[column.status,orders.filter(order=>order.status===column.status)])) as Partial<Record<OrderStatus,ActiveOrder[]>>,[orders])
 
   const reconcile=useCallback(async()=>{
     try {
@@ -61,12 +72,14 @@ export default function LiveOrders() {
     // reconciliations are driven by timer/network events or explicit actions.
     queueMicrotask(()=>void reconcile())
     const timer=setInterval(()=>void reconcile(),15000)
+    const clock=setInterval(()=>setNow(Date.now()),30000)
     const onOnline=()=>void reconcile()
     const onOffline=()=>setOffline(true)
     window.addEventListener('online',onOnline)
     window.addEventListener('offline',onOffline)
     return ()=>{
       clearInterval(timer)
+      clearInterval(clock)
       window.removeEventListener('online',onOnline)
       window.removeEventListener('offline',onOffline)
     }
@@ -130,22 +143,41 @@ export default function LiveOrders() {
     {logoutError && <p role="alert" className="px-5 pt-4 text-sm text-red-800">{logoutError}</p>}
     {error && <p role="status" className="px-5 pt-4 text-sm text-red-800">{error}</p>}
     {loading ? <p className="p-8">Загрузка заказов…</p> :
-      <section className="grid gap-4 p-5 md:grid-cols-2 lg:grid-cols-3">
-        {orders.length===0 ? <p className="p-8 text-slate-500">Активных заказов нет.</p> : orders.map(order=>
-          <article key={order.id} className="rounded-2xl border bg-white p-5 shadow-sm">
-            <div className="flex items-center justify-between gap-3"><h2 className="text-3xl font-black">№ {order.order_number}</h2><span>{labels[order.status]}</span></div>
-            <p className="mt-2 text-sm text-slate-500">rev {order.revision} · {new Date(order.created_at).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}</p>
-            {(order.customer_name||order.customer_phone) && <p className="mt-3 text-sm"><span className="font-bold">{order.customer_name||'Клиент'}</span>{order.customer_phone ? ` · ${order.customer_phone}` : ''}</p>}
-            <div className="my-4 space-y-3">{order.order_items.map(item=><div key={item.id} className="border-t pt-3">
-              <div className="flex justify-between gap-3"><span className="font-bold">{item.quantity} × {item.name_snapshot}</span><span>{Number(item.line_total).toFixed(0)} ₽</span></div>
-              {item.order_item_modifiers?.length>0 && <ul className="mt-1 text-sm text-slate-600">{item.order_item_modifiers.map(mod=><li key={mod.id}>+ {mod.name_snapshot}{Number(mod.price_delta)!==0 ? ` · ${Number(mod.price_delta).toFixed(0)} ₽` : ''}</li>)}</ul>}
-            </div>)}</div>
-            {order.notes && <p className="my-4 rounded-xl bg-amber-50 p-3"><span className="font-bold">Комментарий: </span>{order.notes}</p>}
-            <p className="my-4 text-lg font-bold">Итого: {Number(order.total).toFixed(0)} ₽</p>
-            {next[order.status] && <button disabled={offline||busy!==null} onClick={()=>void advance(order)} className="min-h-14 w-full rounded-xl bg-slate-900 px-4 text-lg font-bold text-white disabled:opacity-40">{busy===order.id?'Сохраняю…':action[order.status]}</button>}
-            {['pending','accepted','preparing'].includes(order.status) && <button disabled={offline||busy!==null} onClick={()=>{setCancelId(order.id);setCancelReason('')}} className="mt-2 min-h-12 w-full rounded-xl text-slate-500 disabled:opacity-40">Отменить заказ</button>}
-          </article>
-        )}
+      <section className="overflow-x-auto p-4 lg:p-6">
+        <div className="grid min-w-[1180px] grid-cols-4 gap-4">
+          {columns.map(column=>{
+            const list=grouped[column.status]??[]
+            return <section key={column.status} className="rounded-2xl bg-slate-200/70 p-3">
+              <header className="mb-3 flex items-center justify-between px-1">
+                <h2 className="text-lg font-black">{column.title}</h2>
+                <span className="grid min-h-8 min-w-8 place-items-center rounded-full bg-white px-2 text-sm font-black shadow-sm">{list.length}</span>
+              </header>
+              <div className="space-y-3">
+                {list.length===0 && <div className="rounded-2xl border border-dashed border-slate-300 bg-white/60 p-6 text-center text-sm text-slate-500">{column.empty}</div>}
+                {list.map(order=>{
+                  const age=ageMinutes(order.created_at,now)
+                  return <article key={order.id} className={`rounded-2xl border-t-4 ${column.accent} bg-white p-4 shadow-sm`}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div><h3 className="text-3xl font-black leading-none">№ {order.order_number}</h3><p className="mt-2 text-xs font-medium text-slate-500">{new Date(order.created_at).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}</p></div>
+                      <div className={`rounded-xl px-3 py-2 text-right ${age>=20?'bg-red-100 text-red-800':age>=10?'bg-amber-100 text-amber-900':'bg-slate-100 text-slate-700'}`}><div className="text-xl font-black">{age} мин</div><div className="text-[10px] font-bold uppercase tracking-wide">ожидание</div></div>
+                    </div>
+                    {(order.customer_name||order.customer_phone) && <div className="mt-3 rounded-xl bg-slate-50 p-3 text-sm"><span className="font-bold">{order.customer_name||'Клиент'}</span>{order.customer_phone && <div className="mt-1 text-slate-600">{order.customer_phone}</div>}</div>}
+                    <div className="my-4 divide-y">
+                      {order.order_items.map(item=><div key={item.id} className="py-3 first:pt-0 last:pb-0">
+                        <div className="flex justify-between gap-3"><span className="text-base font-extrabold"><span className="mr-2 text-xl">{item.quantity}×</span>{item.name_snapshot}</span><span className="shrink-0 text-sm font-semibold">{Number(item.line_total).toFixed(0)} ₽</span></div>
+                        {item.order_item_modifiers?.length>0 && <ul className="mt-1 pl-8 text-sm text-slate-600">{item.order_item_modifiers.map(mod=><li key={mod.id}>+ {mod.name_snapshot}{Number(mod.price_delta)!==0 ? ` · ${Number(mod.price_delta).toFixed(0)} ₽` : ''}</li>)}</ul>}
+                      </div>)}
+                    </div>
+                    {order.notes && <div className="my-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm"><div className="mb-1 font-black">Комментарий</div>{order.notes}</div>}
+                    <div className="mb-3 flex items-end justify-between border-t pt-3"><span className="text-xs font-bold uppercase tracking-wide text-slate-400">{labels[order.status]}</span><span className="text-xl font-black">{Number(order.total).toFixed(0)} ₽</span></div>
+                    {next[order.status] && <button disabled={offline||busy!==null} onClick={()=>void advance(order)} className="min-h-14 w-full rounded-xl bg-slate-950 px-4 text-lg font-black text-white shadow-sm disabled:opacity-40">{busy===order.id?'Сохраняю…':action[order.status]}</button>}
+                    {['pending','accepted','preparing'].includes(order.status) && <button disabled={offline||busy!==null} onClick={()=>{setCancelId(order.id);setCancelReason('')}} className="mt-1 min-h-11 w-full rounded-xl text-sm font-semibold text-slate-500 disabled:opacity-40">Отменить</button>}
+                  </article>
+                })}
+              </div>
+            </section>
+          })}
+        </div>
       </section>}
     {cancelId && <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4"><section role="dialog" aria-modal="true" aria-labelledby="live-cancel-title" className="w-full max-w-md rounded-2xl bg-white p-6">
       <h2 id="live-cancel-title" className="text-xl font-bold">Отменить заказ?</h2>
