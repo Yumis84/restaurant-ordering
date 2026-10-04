@@ -41,7 +41,7 @@ export default function LoginForm() {
         <input autoComplete="username" placeholder="Например: ivan" value={staffCode} onChange={e=>setStaffCode(e.target.value)} className="mt-2 min-h-12 w-full rounded-xl border px-3" />
       </label>
       <label className="mt-4 block text-sm font-bold">PIN
-        <input type="password" inputMode="numeric" autoComplete="current-password" value={pin} onChange={e=>setPin(e.target.value)} className="mt-2 min-h-12 w-full rounded-xl border px-3 text-2xl tracking-widest" />
+        <input type="password" inputMode="numeric" autoComplete="current-password" minLength={6} maxLength={12} pattern="[0-9]{6,12}" value={pin} onChange={e=>setPin(e.target.value)} className="mt-2 min-h-12 w-full rounded-xl border px-3 text-2xl tracking-widest" />
       </label>
       {error && <p role="alert" className="mt-4 text-sm text-red-800">{error}</p>}
       <button disabled={busy||!staffCode.trim()||!pin} className="mt-6 min-h-14 w-full rounded-xl bg-slate-900 text-lg font-bold text-white disabled:opacity-40">{busy?'Вход…':'Войти'}</button>
