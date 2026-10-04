@@ -43,6 +43,7 @@ export default function LiveOrders() {
   const [cancelId,setCancelId]=useState<string|null>(null)
   const [cancelReason,setCancelReason]=useState('')
   const [now,setNow]=useState(()=>Date.now())
+  const [mobileStatus,setMobileStatus]=useState<OrderStatus>('pending')
   const grouped=useMemo(()=>Object.fromEntries(columns.map(column=>[column.status,orders.filter(order=>order.status===column.status)])) as Partial<Record<OrderStatus,ActiveOrder[]>>,[orders])
 
   const reconcile=useCallback(async()=>{
@@ -142,12 +143,15 @@ export default function LiveOrders() {
     {offline && <div role="alert" className="bg-red-800 p-4 text-center font-bold text-white">Нет связи с сервером. Изменение заказов заблокировано.</div>}
     {logoutError && <p role="alert" className="px-5 pt-4 text-sm text-red-800">{logoutError}</p>}
     {error && <p role="status" className="px-5 pt-4 text-sm text-red-800">{error}</p>}
+    {!loading && <nav aria-label="Статус заказов" className="sticky top-0 z-10 flex gap-2 overflow-x-auto border-b bg-white p-3 md:hidden">
+      {columns.map(column=>{const count=(grouped[column.status]??[]).length;const selected=mobileStatus===column.status;return <button key={column.status} onClick={()=>setMobileStatus(column.status)} aria-pressed={selected} className={`min-h-11 shrink-0 rounded-xl px-4 text-sm font-black ${selected?'bg-slate-950 text-white':'bg-slate-100 text-slate-700'}`}>{column.title} <span className={`ml-1 rounded-full px-2 py-0.5 text-xs ${selected?'bg-white/20':'bg-white'}`}>{count}</span></button>})}
+    </nav>}
     {loading ? <p className="p-8">Загрузка заказов…</p> :
-      <section className="overflow-x-auto p-4 lg:p-6">
-        <div className="grid min-w-[1180px] grid-cols-4 gap-4">
+      <section className="overflow-x-auto p-3 md:p-4 lg:p-6">
+        <div className="grid grid-cols-1 gap-4 md:min-w-[1180px] md:grid-cols-4">
           {columns.map(column=>{
             const list=grouped[column.status]??[]
-            return <section key={column.status} className="rounded-2xl bg-slate-200/70 p-3">
+            return <section key={column.status} className={`rounded-2xl bg-slate-200/70 p-3 ${mobileStatus===column.status?'block':'hidden'} md:block`}>
               <header className="mb-3 flex items-center justify-between px-1">
                 <h2 className="text-lg font-black">{column.title}</h2>
                 <span className="grid min-h-8 min-w-8 place-items-center rounded-full bg-white px-2 text-sm font-black shadow-sm">{list.length}</span>
