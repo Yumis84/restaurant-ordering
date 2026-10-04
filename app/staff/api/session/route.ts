@@ -1,0 +1,92 @@
+import { randomBytes } from 'crypto'
+import { NextRequest, NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
+import { staffDatabase, staffSessionCookieName, tokenHash, requireSameOrigin, requireKdsLiveEnabled, rejectOversizedJson } from '@/lib/staff/server'
+
+export const dynamic = 'force-dynamic'
+
+export async function POST(request: NextRequest) {
+  try { requireKdsLiveEnabled() } catch { return NextResponse.json({ error: 'KDS_NOT_ENABLED' }, { status: 404 }) }
+  try { await requireSameOrigin(); rejectOversizedJson(request, 2048) } catch (e) { return NextResponse.json({ error: e instanceof Error && e.message === 'REQUEST_TOO_LARGE' ? 'REQUEST_TOO_LARGE' : 'INVALID_ORIGIN' }, { status: e instanceof Error && e.message === 'REQUEST_TOO_LARGE' ? 413 : 403 }) }
+  const body = await request.json().catch(() => null)
+  if (typeof body?.staff_code !== 'string' || typeof body?.pin !== 'string') {
+    return NextResponse.json({ error: 'INVALID_REQUEST' }, { status: 400 })
+  }
+
+  const db = staffDatabase()
+  const { data: verified, error } = await db.rpc('staff_verify_pin', {
+    p_staff_code: body.staff_code.trim(),
+    p_pin: body.pin,
+  })
+
+  if (error) {
+    return NextResponse.json({ error: 'AUTH_SERVICE_ERROR' }, { status: 503 })
+  }
+
+  const result = verified?.[0]
+  if (!result?.ok) {
+    return NextResponse.json({ error: 'INVALID_CREDENTIALS' }, { status: 401 })
+  }
+
+  const token = randomBytes(32).toString('base64url')
+  const expires = new Date(Date.now() + 12 * 60 * 60 * 1000)
+  const { error: sessionError } = await db.from('staff_sessions').insert({
+    staff_id: result.staff_id,
+    token_hash: tokenHash(token),
+    expires_at: expires.toISOString(),
+  })
+
+  if (sessionError) {
+    return NextResponse.json({ error: 'SESSION_CREATE_FAILED' }, { status: 500 })
+  }
+
+  const response = NextResponse.json({
+    ok: true,
+    staff: { id: result.staff_id, display_name: result.display_name },
+    expires_at: expires.toISOString(),
+  })
+
+  response.cookies.set(staffSessionCookieName(), token, {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'strict',
+    path: '/',
+    expires,
+  })
+
+  return response
+}
+
+export async function DELETE() {
+  // Logout must remain available even when KDS is emergency-disabled so an
+  // already-issued session can still be revoked server-side.
+  try { await requireSameOrigin() } catch { return NextResponse.json({ error: 'INVALID_ORIGIN' }, { status: 403 }) }
+  const jar = await cookies()
+  const token = jar.get(staffSessionCookieName())?.value
+
+  let revocationFailed = false
+  if (token) {
+    const db = staffDatabase()
+    const { error } = await db
+      .from('staff_sessions')
+      .update({ revoked_at: new Date().toISOString() })
+      .eq('token_hash', tokenHash(token))
+      .is('revoked_at', null)
+    revocationFailed = Boolean(error)
+  }
+
+  // Preserve the token on failure so the same session can be revoked on retry.
+  if (revocationFailed) {
+    return NextResponse.json({ error: 'SESSION_REVOCATION_FAILED' }, { status: 503 })
+  }
+
+  jar.set(staffSessionCookieName(), '', {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'strict',
+    path: '/',
+    maxAge: 0,
+  })
+
+  return NextResponse.json({ ok: true })
+}

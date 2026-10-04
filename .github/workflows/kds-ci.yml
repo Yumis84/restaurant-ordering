@@ -1,0 +1,46 @@
+name: KDS CI
+
+on:
+  push:
+    branches:
+      - feat/staff-orders-preview
+permissions:
+  contents: read
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      # Build-time placeholders only. No production credentials in CI.
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder
+      KDS_LIVE_ENABLED: 'false'
+      PAGES_DEPLOYMENT_MODE: server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      # KDS/web gate. Legacy Deno Edge Functions have pre-existing lint debt.
+      - run: npx eslint app lib
+      - run: npm run build
+
+
+  staff-static:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: preview-placeholder
+      KDS_LIVE_ENABLED: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: node scripts/build-staff-static.mjs
+      - name: Verify demo board export
+        run: test -f out/orders/index.html

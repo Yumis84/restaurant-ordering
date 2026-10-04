@@ -1,0 +1,15 @@
+services:
+  kds:
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+    restart: unless-stopped
+    environment:
+      PAGES_DEPLOYMENT_MODE: server
+      KDS_LIVE_ENABLED: ${KDS_LIVE_ENABLED:-false}
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+    ports:
+      - "127.0.0.1:3000:3000"
