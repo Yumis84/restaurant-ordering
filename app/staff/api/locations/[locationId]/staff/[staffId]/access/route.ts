@@ -17,6 +17,9 @@ export async function POST(request:NextRequest,{params}:Params){
       .select('role').eq('location_id',locationId).eq('staff_id',staffId).single()
     if(lookupError||!target) return NextResponse.json({error:'MEMBERSHIP_NOT_FOUND'},{status:404})
     if(target.role==='owner') return NextResponse.json({error:'OWNER_ACCESS_PROTECTED'},{status:403})
+    const actorRole=actor.memberships.find(row=>row.locationId===locationId)?.role
+    if(target.role==='manager'&&actorRole!=='owner')
+      return NextResponse.json({error:'OWNER_REQUIRED_FOR_MANAGER_ACCESS'},{status:403})
 
     const {error}=await db.rpc('staff_set_location_access',{p_location_id:locationId,p_staff_id:staffId,p_active:body.active})
     if(error) return NextResponse.json({error:'ACCESS_CHANGE_FAILED'},{status:400})
