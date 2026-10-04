@@ -82,6 +82,7 @@ begin
     raise exception 'ASSERT stale transition unexpectedly succeeded';
   exception
     when others then
+      if sqlerrm = 'ASSERT stale transition unexpectedly succeeded' then raise; end if;
       if sqlerrm not like '%ORDER_CONFLICT%' then raise; end if;
   end;
 
@@ -95,6 +96,7 @@ begin
     raise exception 'ASSERT cancellation without reason unexpectedly succeeded';
   exception
     when others then
+      if sqlerrm = 'ASSERT cancellation without reason unexpectedly succeeded' then raise; end if;
       if sqlerrm not like '%REASON_REQUIRED%' then raise; end if;
   end;
 
