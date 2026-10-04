@@ -55,11 +55,6 @@ export default function LiveOrders() {
         if (previous.length>0 && incoming.length>0) setMobileStatus('pending')
         return fresh
       })
-      setSeenPendingIds(previous=>{
-        const nextSeen=new Set(previous)
-        for (const order of fresh) if(order.status==='pending') nextSeen.add(order.id)
-        return nextSeen
-      })
       setOffline(false)
       setError('')
     } catch (e) {
