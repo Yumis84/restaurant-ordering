@@ -1,13 +1,53 @@
-import { NextResponse } from 'next/server'
+import { randomBytes } from 'crypto'
+import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
-import { staffDatabase, staffSessionCookieName } from '@/lib/staff/server'
+import { staffDatabase, staffSessionCookieName, tokenHash } from '@/lib/staff/server'
 
 export const dynamic = 'force-dynamic'
 
-export async function POST() {
-  // Login intentionally remains disabled until a slow password/PIN hash
-  // implementation and rate-limit/lockout acceptance tests are in place.
-  return NextResponse.json({ error: 'STAFF_LOGIN_NOT_ENABLED' }, { status: 503 })
+export async function POST(request: NextRequest) {
+  const body = await request.json().catch(() => null)
+  if (!body?.staff_id || typeof body?.pin !== 'string') {
+    return NextResponse.json({ error: 'INVALID_REQUEST' }, { status: 400 })
+  }
+
+  const db = staffDatabase()
+  const { data: verified, error } = await db.rpc('staff_verify_pin', {
+    p_staff_id: body.staff_id,
+    p_pin: body.pin,
+  })
+
+  if (error || !verified?.length) {
+    return NextResponse.json({ error: 'INVALID_CREDENTIALS' }, { status: 401 })
+  }
+
+  const token = randomBytes(32).toString('base64url')
+  const expires = new Date(Date.now() + 12 * 60 * 60 * 1000)
+  const { error: sessionError } = await db.from('staff_sessions').insert({
+    staff_id: verified[0].staff_id,
+    token_hash: tokenHash(token),
+    expires_at: expires.toISOString(),
+  })
+
+  if (sessionError) {
+    return NextResponse.json({ error: 'SESSION_CREATE_FAILED' }, { status: 500 })
+  }
+
+  const response = NextResponse.json({
+    ok: true,
+    staff: { id: verified[0].staff_id, display_name: verified[0].display_name },
+    expires_at: expires.toISOString(),
+  })
+
+  response.cookies.set(staffSessionCookieName(), token, {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'strict',
+    path: '/',
+    expires,
+  })
+
+  return response
 }
 
 export async function DELETE() {
@@ -15,14 +55,12 @@ export async function DELETE() {
   const token = jar.get(staffSessionCookieName())?.value
 
   if (token) {
-    // Session revocation requires the token hash helper; until login is enabled,
-    // there should be no valid cookie issued by this application.
-    // Keep logout fail-closed rather than accepting a plaintext-token lookup.
-    try {
-      staffDatabase()
-    } catch {
-      // Cookie is still cleared below.
-    }
+    const db = staffDatabase()
+    await db
+      .from('staff_sessions')
+      .update({ revoked_at: new Date().toISOString() })
+      .eq('token_hash', tokenHash(token))
+      .is('revoked_at', null)
   }
 
   jar.set(staffSessionCookieName(), '', {
