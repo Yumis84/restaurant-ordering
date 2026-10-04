@@ -58,7 +58,8 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE() {
-  try { requireKdsLiveEnabled() } catch { return NextResponse.json({ error: 'KDS_NOT_ENABLED' }, { status: 404 }) }
+  // Logout must remain available even when KDS is emergency-disabled so an
+  // already-issued session can still be revoked server-side.
   try { await requireSameOrigin() } catch { return NextResponse.json({ error: 'INVALID_ORIGIN' }, { status: 403 }) }
   const jar = await cookies()
   const token = jar.get(staffSessionCookieName())?.value
