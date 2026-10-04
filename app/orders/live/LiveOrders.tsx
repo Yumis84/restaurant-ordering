@@ -57,8 +57,8 @@ export default function LiveOrders() {
     }
   },[reconcile])
 
-  async function mutate(order: ActiveOrder, toStatus: OrderStatus, reason?: string) {
-    if (offline || busy) return
+  async function mutate(order: ActiveOrder, toStatus: OrderStatus, reason?: string): Promise<boolean> {
+    if (offline || busy) return false
     setBusy(order.id)
     try {
       const result=await transitionOrder({
@@ -71,12 +71,15 @@ export default function LiveOrders() {
       if ('conflict' in result && result.conflict) {
         setOrders(result.orders)
         setError('Заказ уже изменён. Данные обновлены.')
+        return false
       } else {
         await reconcile()
+        return true
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'TRANSITION_FAILED')
       await reconcile()
+      return false
     } finally {
       setBusy(null)
     }
@@ -116,7 +119,7 @@ export default function LiveOrders() {
     {cancelId && <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4"><section role="dialog" aria-modal="true" aria-labelledby="live-cancel-title" className="w-full max-w-md rounded-2xl bg-white p-6">
       <h2 id="live-cancel-title" className="text-xl font-bold">Отменить заказ?</h2>
       <label className="mt-4 block">Причина<textarea autoFocus value={cancelReason} onChange={e=>setCancelReason(e.target.value)} className="mt-2 min-h-24 w-full rounded-xl border p-3" /></label>
-      <div className="mt-4 flex gap-3"><button onClick={()=>setCancelId(null)} className="min-h-14 flex-1 rounded-xl border">Назад</button><button disabled={offline||busy!==null||!cancelReason.trim()} onClick={()=>{const order=orders.find(o=>o.id===cancelId);if(order) void mutate(order,'cancelled',cancelReason.trim()).then(()=>{setCancelId(null);setCancelReason('')})}} className="min-h-14 flex-1 rounded-xl bg-red-800 font-bold text-white disabled:opacity-40">Отменить</button></div>
+      <div className="mt-4 flex gap-3"><button onClick={()=>setCancelId(null)} className="min-h-14 flex-1 rounded-xl border">Назад</button><button disabled={offline||busy!==null||!cancelReason.trim()} onClick={()=>{const order=orders.find(o=>o.id===cancelId);if(order) void mutate(order,'cancelled',cancelReason.trim()).then(ok=>{if(ok){setCancelId(null);setCancelReason('')}})}} className="min-h-14 flex-1 rounded-xl bg-red-800 font-bold text-white disabled:opacity-40">Отменить</button></div>
     </section></div>}
   </main>
 }
