@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireStaffContext, staffDatabase, requireSameOrigin } from '@/lib/staff/server'
+import { requireStaffContext, staffDatabase, requireSameOrigin, requireKdsLiveEnabled } from '@/lib/staff/server'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,6 +14,7 @@ function rpcErrorCode(message: string) {
 }
 
 export async function POST(request: NextRequest, { params }: Params) {
+  try { requireKdsLiveEnabled() } catch { return NextResponse.json({ error: 'KDS_NOT_ENABLED' }, { status: 404 }) }
   try {
     await requireSameOrigin()
     const staff = await requireStaffContext()
