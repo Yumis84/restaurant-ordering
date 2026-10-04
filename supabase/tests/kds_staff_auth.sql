@@ -18,23 +18,37 @@ begin
     (v_location, 'kds-auth-test-a-' || substr(v_location::text,1,8), 'KDS auth test A', true),
     (v_other_location, 'kds-auth-test-b-' || substr(v_other_location::text,1,8), 'KDS auth test B', true);
 
-  insert into public.staff_users(id, display_name, pin_hash)
-  values (v_staff, 'KDS Test Staff', crypt('4826', gen_salt('bf', 4)));
+  insert into public.staff_users(id, display_name, staff_code, pin_hash)
+  values (v_staff, 'KDS Test Staff', 'cook-01', crypt('4826', gen_salt('bf', 4)));
 
   insert into public.staff_location_memberships(staff_id, location_id)
   values (v_staff, v_location);
 
   perform set_config('request.jwt.claim.role','service_role',true);
 
-  -- Correct PIN succeeds.
+  -- Correct code + PIN succeeds.
   select count(*) into v_count
-  from public.staff_verify_pin(v_staff, '4826');
+  from public.staff_verify_pin('cook-01', '4826');
   if v_count <> 1 then raise exception 'correct PIN did not authenticate'; end if;
+
+  -- Code lookup is case-insensitive and trims surrounding whitespace.
+  select count(*) into v_count
+  from public.staff_verify_pin('  COOK-01  ', '4826');
+  if v_count <> 1 then raise exception 'normalized staff code did not authenticate'; end if;
+
+  -- Unknown code is indistinguishable from a wrong PIN.
+  begin
+    perform public.staff_verify_pin('missing-user', '4826');
+    raise exception 'unknown code unexpectedly authenticated';
+  exception when others then
+    if sqlerrm = 'unknown code unexpectedly authenticated' then raise; end if;
+    if sqlerrm <> 'INVALID_CREDENTIALS' then raise; end if;
+  end;
 
   -- Four failures do not lock.
   for i in 1..4 loop
     begin
-      perform public.staff_verify_pin(v_staff, '0000');
+      perform public.staff_verify_pin('cook-01', '0000');
     exception when others then
       if sqlerrm <> 'INVALID_CREDENTIALS' then raise; end if;
     end;
@@ -48,7 +62,7 @@ begin
 
   -- Fifth failure locks for a bounded interval.
   begin
-    perform public.staff_verify_pin(v_staff, '0000');
+    perform public.staff_verify_pin('cook-01', '0000');
   exception when others then
     if sqlerrm <> 'INVALID_CREDENTIALS' then raise; end if;
   end;
@@ -61,7 +75,7 @@ begin
 
   -- Correct PIN is rejected while locked.
   begin
-    perform public.staff_verify_pin(v_staff, '4826');
+    perform public.staff_verify_pin('cook-01', '4826');
     raise exception 'locked account authenticated';
   exception when others then
     if sqlerrm = 'locked account authenticated' then raise; end if;
@@ -70,7 +84,7 @@ begin
 
   -- Simulate lock expiry; correct PIN resets counters.
   update public.staff_users set locked_until=clock_timestamp()-interval '1 second' where id=v_staff;
-  perform public.staff_verify_pin(v_staff, '4826');
+  perform public.staff_verify_pin('cook-01', '4826');
 
   select pin_failures, locked_until into v_failures, v_locked
   from public.staff_users where id=v_staff;
