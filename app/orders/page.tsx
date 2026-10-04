@@ -10,8 +10,9 @@ const action: Partial<Record<Status, string>> = { pending: 'Принять', acc
 const labels: Record<Status, string> = { pending: 'Новый', accepted: 'Принят', preparing: 'Готовится', ready: 'Готов', completed: 'Выдан', cancelled: 'Отменён' }
 const columns: { title: string; states: Status[]; color: string }[] = [
   { title: 'Новые', states: ['pending'], color: 'border-amber-400' },
-  { title: 'Готовятся', states: ['accepted', 'preparing'], color: 'border-blue-400' },
-  { title: 'Готовы', states: ['ready'], color: 'border-emerald-400' },
+  { title: 'Приняты', states: ['accepted'], color: 'border-sky-400' },
+  { title: 'Готовятся', states: ['preparing'], color: 'border-violet-400' },
+  { title: 'Готовы', states: ['ready'], color: 'border-emerald-500' },
 ]
 function samples(now: number): Ticket[] {
   return [
@@ -66,8 +67,8 @@ export default function OrdersPreview() {
   function card(order: Ticket) {
     const minutes = Math.max(0, Math.floor((now - (order.status === 'ready' ? order.readyAt ?? order.created : order.created)) / 60000))
     const done = ['completed', 'cancelled'].includes(order.status)
-    return <article key={order.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="flex items-center justify-between gap-3"><h3 className="text-3xl font-black">№ {order.id}</h3><span className={order.status === 'ready' && minutes >= 15 ? 'font-bold text-red-700' : 'text-slate-600'}>{order.status === 'ready' ? 'Готов ' : ''}{minutes} мин</span></div>
+    return <article key={order.id} className={'rounded-2xl border-t-4 bg-white p-4 shadow-sm ' + (order.status==='pending'&&minutes>=5?'ring-2 ring-amber-300 ':'') + (order.status==='pending'?'border-amber-400':order.status==='accepted'?'border-sky-400':order.status==='preparing'?'border-violet-400':order.status==='ready'?'border-emerald-500':'border-slate-300')}>
+      <div className="flex items-start justify-between gap-3"><div className="flex items-center gap-2"><h3 className="text-3xl font-black">№ {order.id}</h3>{order.status==='pending'&&<span className="rounded-full bg-amber-100 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-amber-900">Новый</span>}</div><div className={'rounded-xl px-3 py-2 text-right ' + (minutes>=20?'bg-red-100 text-red-800':minutes>=10?'bg-amber-100 text-amber-900':'bg-slate-100 text-slate-700')}><div className="text-xl font-black">{minutes} мин</div><div className="text-[10px] font-bold uppercase tracking-wide">ожидание</div></div></div>
       <p className="mt-2 text-sm text-slate-500">Самовывоз · {labels[order.status]}</p>
       <TicketItems items={order.items} />
       {order.note && <p className="mb-4 break-words rounded-xl bg-amber-50 p-3 text-amber-950"><span className="font-bold">Ко всему заказу: </span>{order.note}</p>}
@@ -80,9 +81,9 @@ export default function OrdersPreview() {
   }
   return <main className="min-h-screen bg-slate-100 text-slate-900">
     <div className="bg-amber-100 px-5 py-3 text-center text-sm font-semibold">Демонстрация интерфейса · реальные заказы не подключены · изменения сбросятся при обновлении</div>
-    <header className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 bg-white p-5 lg:px-8">
-      <div><h1 className="text-3xl font-black">Заказы</h1><p className="text-sm text-slate-500">Шаваллея · Каштановая Аллея, 73а</p></div>
-      <div className="flex flex-wrap gap-2">
+    <header className="border-b border-slate-200 bg-white p-4 lg:px-8">
+      <div><h1 className="text-2xl font-black sm:text-3xl">Заказы</h1><p className="text-xs text-slate-500 sm:text-sm">Шаваллея · Каштановая Аллея, 73а</p></div>
+      <div className="mt-3 flex flex-wrap gap-2">
         <button onClick={() => setHistory(false)} aria-pressed={!history} className="min-h-12 rounded-xl border px-4 font-bold">Активные</button>
         <button onClick={() => setHistory(true)} aria-pressed={history} className="min-h-12 rounded-xl border px-4 font-bold">История · {finished.length}</button>
         <button onClick={() => { setOrders(samples(Date.now())); setHistory(false); setNotice('Загружены вымышленные заказы для проверки интерфейса') }} className="min-h-12 rounded-xl bg-slate-900 px-4 font-bold text-white">Загрузить примеры</button>
@@ -91,11 +92,11 @@ export default function OrdersPreview() {
     </header>
     {offline && <div role="alert" className="bg-red-800 p-4 text-center font-bold text-white">Имитация: нет связи. Действия заблокированы, последние данные сохранены на экране.</div>}
     <p role="status" className="px-5 pt-3 text-sm text-slate-600">{notice}</p>
-    {!history && <nav aria-label="Статусы заказов" className="flex gap-2 overflow-auto p-4 lg:hidden">{columns.map((column, i) => <button key={column.title} aria-pressed={tab === i} onClick={() => setTab(i)} className={'min-h-12 whitespace-nowrap rounded-xl px-4 font-bold ' + (tab === i ? 'bg-slate-900 text-white' : 'bg-white')}>{column.title} · {orders.filter(o => column.states.includes(o.status)).length}</button>)}</nav>}
+    {!history && <nav aria-label="Статусы заказов" className="sticky top-0 z-10 flex gap-2 overflow-auto border-b bg-white p-3 md:hidden">{columns.map((column, i) => <button key={column.title} aria-pressed={tab === i} onClick={() => setTab(i)} className={'min-h-12 whitespace-nowrap rounded-xl px-4 font-bold ' + (tab === i ? 'bg-slate-900 text-white' : 'bg-white')}>{column.title} · {orders.filter(o => column.states.includes(o.status)).length}</button>)}</nav>}
     {history ? <section aria-label="История" className="grid gap-4 p-5 md:grid-cols-2 lg:grid-cols-3">{finished.length ? finished.map(card) : <p className="p-8 text-slate-500">Завершённых заказов пока нет.</p>}</section>
-      : <div className="grid gap-5 p-5 lg:grid-cols-3 lg:p-8">{columns.map((column, i) => {
+      : <div className="grid gap-4 p-3 md:min-w-[1180px] md:grid-cols-4 md:p-4 lg:p-6">{columns.map((column, i) => {
         const tickets = orders.filter(o => column.states.includes(o.status))
-        return <section key={column.title} className={(tab === i ? '' : 'hidden lg:block ') + 'rounded-2xl border-t-4 ' + column.color}>
+        return <section key={column.title} className={(tab === i ? '' : 'hidden md:block ') + 'rounded-2xl border-t-4 ' + column.color}>
           <h2 className="flex items-center justify-between p-4 text-xl font-bold">{column.title}<span className="rounded-full bg-white px-3 py-1">{tickets.length}</span></h2>
           <div className="space-y-4">{tickets.length ? tickets.map(card) : <p className="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-slate-500">Заказов нет</p>}</div>
         </section>
