@@ -10,7 +10,7 @@ export async function GET() {
 
     const { data, error } = await db
       .from('orders')
-      .select('id,order_number,location_id,status,created_at,updated_at,customer_name,customer_phone,notes,total,order_items(id,name_snapshot,unit_price,quantity,line_total,order_item_modifiers(id,name_snapshot,price_delta))')
+      .select('id,order_number,location_id,status,revision,created_at,updated_at,customer_name,customer_phone,notes,total,order_items(id,name_snapshot,unit_price,quantity,line_total,order_item_modifiers(id,name_snapshot,price_delta))')
       .in('location_id', staff.locationIds)
       .in('status', ['pending', 'accepted', 'preparing', 'ready'])
       .order('created_at', { ascending: true })
