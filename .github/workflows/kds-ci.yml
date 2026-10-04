@@ -1,0 +1,37 @@
+name: KDS CI
+
+on:
+  push:
+    branches:
+      - feat/staff-orders-preview
+  pull_request:
+    paths:
+      - 'app/**'
+      - 'lib/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig.json'
+      - 'next.config.*'
+      - '.github/workflows/kds-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      # Build-time placeholders only. No production credentials in CI.
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder
+      KDS_LIVE_ENABLED: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
