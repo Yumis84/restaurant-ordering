@@ -26,3 +26,28 @@ jobs:
       # KDS/web gate. Legacy Deno Edge Functions have pre-existing lint debt.
       - run: npx eslint app lib
       - run: npm run build
+
+
+  static-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      # Safe static preview build: no production credentials and no live KDS API.
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: preview-placeholder
+      KDS_LIVE_ENABLED: 'false'
+      PAGES_DEPLOYMENT_MODE: github-pages
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npm run build
+      - name: Verify safe orders preview export
+        run: test -f out/orders/index.html
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kds-static-preview
+          path: out
+          retention-days: 7
