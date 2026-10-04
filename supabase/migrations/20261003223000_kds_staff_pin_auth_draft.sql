@@ -6,7 +6,12 @@ begin;
 alter table public.staff_users
   add column if not exists pin_failures integer not null default 0,
   add column if not exists locked_until timestamptz,
-  add column if not exists last_login_at timestamptz,
+  add column if not exists last_login_at timestamptz;
+
+alter table public.staff_users
+  drop constraint if exists staff_users_pin_failures_nonnegative;
+
+alter table public.staff_users
   add constraint staff_users_pin_failures_nonnegative check (pin_failures >= 0);
 
 create or replace function public.staff_verify_pin(
