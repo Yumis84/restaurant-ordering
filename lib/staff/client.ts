@@ -83,7 +83,8 @@ export async function transitionOrder(input: {
   })
 
   try {
-    return await jsonOrError(await send())
+    const payload = await jsonOrError(await send())
+    return { ok: true as const, order: payload.order }
   } catch (error) {
     if (error instanceof OrderConflictError) {
       // Conflict is not retried blindly. Caller receives canonical state and
