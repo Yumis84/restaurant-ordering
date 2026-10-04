@@ -1,5 +1,11 @@
 'use client'
 
+/*
+ * Temporary V1 bootstrap: staff_id is explicit. Before restaurant rollout,
+ * replace this operator-facing UUID field with a non-secret short staff code
+ * or a protected staff chooser. Never expose an unauthenticated staff directory.
+ */
+
 import { FormEvent, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
