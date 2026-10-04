@@ -16,6 +16,7 @@ jobs:
       NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder
       KDS_LIVE_ENABLED: 'false'
+      PAGES_DEPLOYMENT_MODE: server
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
