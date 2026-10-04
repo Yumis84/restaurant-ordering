@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireLocationManager, staffDatabase, requireSameOrigin } from '@/lib/staff/server'
+import { requireLocationManager, staffDatabase, requireSameOrigin, requireKdsLiveEnabled } from '@/lib/staff/server'
 export const dynamic='force-dynamic'
 type Params={params:Promise<{locationId:string;staffId:string}>}
 
-export async function POST(request:NextRequest,{params}:Params){
+export async function POST(request:NextRequest,{params}:Params) {
+  try { requireKdsLiveEnabled() } catch { return NextResponse.json({ error: 'KDS_NOT_ENABLED' }, { status: 404 }) }
   try{
     await requireSameOrigin()
     const {locationId,staffId}=await params
