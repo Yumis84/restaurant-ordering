@@ -30,7 +30,9 @@ export async function POST(request:NextRequest,{params}:Params) {
     if(typeof body?.staff_code!=='string'||typeof body?.display_name!=='string'||typeof body?.pin!=='string')
       return NextResponse.json({error:'INVALID_REQUEST'},{status:400})
     const actorRole=actor.memberships.find(row=>row.locationId===locationId)?.role
-    const role=body.role==='manager'?'manager':'staff'
+    if(body.role!==undefined && body.role!=='staff' && body.role!=='manager')
+      return NextResponse.json({error:'INVALID_ROLE'},{status:400})
+    const role=body.role ?? 'staff'
     if(role==='manager'&&actorRole!=='owner')
       return NextResponse.json({error:'OWNER_REQUIRED_FOR_MANAGER_ROLE'},{status:403})
     const {data,error}=await staffDatabase().rpc('staff_create_for_location',{
