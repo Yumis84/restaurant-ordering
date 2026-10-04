@@ -1,13 +1,13 @@
 import { randomBytes } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
-import { staffDatabase, staffSessionCookieName, tokenHash, requireSameOrigin, requireKdsLiveEnabled } from '@/lib/staff/server'
+import { staffDatabase, staffSessionCookieName, tokenHash, requireSameOrigin, requireKdsLiveEnabled, rejectOversizedJson } from '@/lib/staff/server'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try { requireKdsLiveEnabled() } catch { return NextResponse.json({ error: 'KDS_NOT_ENABLED' }, { status: 404 }) }
-  try { await requireSameOrigin() } catch { return NextResponse.json({ error: 'INVALID_ORIGIN' }, { status: 403 }) }
+  try { await requireSameOrigin(); rejectOversizedJson(request, 2048) } catch (e) { return NextResponse.json({ error: e instanceof Error && e.message === 'REQUEST_TOO_LARGE' ? 'REQUEST_TOO_LARGE' : 'INVALID_ORIGIN' }, { status: e instanceof Error && e.message === 'REQUEST_TOO_LARGE' ? 413 : 403 }) }
   const body = await request.json().catch(() => null)
   if (typeof body?.staff_code !== 'string' || typeof body?.pin !== 'string') {
     return NextResponse.json({ error: 'INVALID_REQUEST' }, { status: 400 })
