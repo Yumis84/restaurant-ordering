@@ -14,7 +14,6 @@ declare
   v_hash text;
   v_membership_active boolean;
   v_revoked timestamptz;
-  v_error text;
 begin
   insert into public.locations(id,slug,name,active)
   values(v_location,'staff-mgmt-'||substr(v_location::text,1,8),'Staff management test',true);
