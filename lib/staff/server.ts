@@ -24,7 +24,11 @@ export function tokenHash(token: string) {
 
 export async function requireStaffContext(): Promise<StaffContext> {
   const token = (await cookies()).get(SESSION_COOKIE)?.value
-  if (!token) throw new Error('STAFF_UNAUTHORIZED')
+  // Login issues 32 random bytes encoded as base64url: exactly 43 characters.
+  // Reject malformed cookie input before hashing/querying the session table.
+  if (!token || !/^[A-Za-z0-9_-]{43}$/.test(token)) {
+    throw new Error('STAFF_UNAUTHORIZED')
+  }
 
   const db = staffDatabase()
   const now = new Date().toISOString()
