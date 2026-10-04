@@ -59,13 +59,15 @@ export async function DELETE() {
   const jar = await cookies()
   const token = jar.get(staffSessionCookieName())?.value
 
+  let revocationFailed = false
   if (token) {
     const db = staffDatabase()
-    await db
+    const { error } = await db
       .from('staff_sessions')
       .update({ revoked_at: new Date().toISOString() })
       .eq('token_hash', tokenHash(token))
       .is('revoked_at', null)
+    revocationFailed = Boolean(error)
   }
 
   jar.set(staffSessionCookieName(), '', {
@@ -76,5 +78,8 @@ export async function DELETE() {
     maxAge: 0,
   })
 
+  if (revocationFailed) {
+    return NextResponse.json({ error: 'SESSION_REVOCATION_FAILED' }, { status: 503 })
+  }
   return NextResponse.json({ ok: true })
 }
