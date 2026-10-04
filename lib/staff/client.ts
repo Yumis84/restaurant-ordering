@@ -43,6 +43,7 @@ async function jsonOrError(response: Response) {
   if (!response.ok) {
     const code = typeof payload?.error === 'string' ? payload.error : 'STAFF_API_ERROR'
     if (response.status === 409 && code === 'ORDER_CONFLICT') throw new OrderConflictError()
+    if (response.status === 401) throw new Error('STAFF_UNAUTHORIZED')
     throw new Error(code)
   }
   return payload
@@ -94,4 +95,12 @@ export async function transitionOrder(input: {
     }
     throw error
   }
+}
+
+export async function logoutStaff() {
+  const response = await fetch('/staff/api/session', {
+    method: 'DELETE',
+    credentials: 'same-origin',
+  })
+  await jsonOrError(response)
 }
