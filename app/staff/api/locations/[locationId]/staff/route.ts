@@ -22,11 +22,14 @@ export async function GET(_:NextRequest,{params}:Params){
 export async function POST(request:NextRequest,{params}:Params){
   try{
     const {locationId}=await params
-    await requireLocationManager(locationId)
+    const actor=await requireLocationManager(locationId)
     const body=await request.json().catch(()=>null)
     if(typeof body?.staff_code!=='string'||typeof body?.display_name!=='string'||typeof body?.pin!=='string')
       return NextResponse.json({error:'INVALID_REQUEST'},{status:400})
+    const actorRole=actor.memberships.find(row=>row.locationId===locationId)?.role
     const role=body.role==='manager'?'manager':'staff'
+    if(role==='manager'&&actorRole!=='owner')
+      return NextResponse.json({error:'OWNER_REQUIRED_FOR_MANAGER_ROLE'},{status:403})
     const {data,error}=await staffDatabase().rpc('staff_create_for_location',{
       p_location_id:locationId,p_staff_code:body.staff_code,p_display_name:body.display_name,p_pin:body.pin,p_role:role
     })
